@@ -2,8 +2,7 @@ cask "zed-dev" do
   version "1.15.0-personal.1"
   sha256 "c03b3f5f74cd7dd6c6aa01cef9b8a59d25419555dabc7957a1a20111b2cca57d"
 
-  url "https://github.com/N4M3Z/zed/releases/download/v#{version}/Zed-aarch64.dmg",
-      verified: "github.com/N4M3Z/zed/"
+  url "https://github.com/N4M3Z/zed/releases/download/v#{version}/Zed-aarch64.dmg"
   name "Zed Dev"
   desc "Personal Zed build with review annotations and terminal patches"
   homepage "https://github.com/N4M3Z/zed"
