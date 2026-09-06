@@ -1,0 +1,24 @@
+bin/bump-release
+  s_626693e6b1dc58::t_deacca19ea83df 29-33
+  s_626693e6b1dc58::t_df33fbb3f2ab53 1-11,13-28,34-68
+  s_626693e6b1dc58::t_80b4364614aada 12
+.github/workflows/bump.yml
+  s_626693e6b1dc58::t_f19105f8af0d4f 1-43,45-69
+  s_626693e6b1dc58::t_450647ce8a87c3 44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "2e6c1e987f8e0f374942987364962b986362184d",
+  "prompts": {},
+  "sessions": {
+    "s_626693e6b1dc58": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fdcdc22-5778-4267-8bbf-6ad8d9c7b385",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Martin Zeman <N4M3Z@users.noreply.github.com>"
+    }
+  }
+}
