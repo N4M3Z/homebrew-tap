@@ -1,0 +1,22 @@
+Formula/cliproxyapi.rb
+  s_626693e6b1dc58::t_70b99b93a83499 1-54
+Formula/cpa-manager-plus.rb
+  s_626693e6b1dc58::t_054e72e13bb863 1-17,25-62
+  s_626693e6b1dc58::t_c3e5c160e7e449 18-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "58ebd8e3cd70744e0c171a89f05c0a354591109e",
+  "prompts": {},
+  "sessions": {
+    "s_626693e6b1dc58": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fdcdc22-5778-4267-8bbf-6ad8d9c7b385",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Martin Zeman <N4M3Z@users.noreply.github.com>"
+    }
+  }
+}
