@@ -12,6 +12,33 @@ tools distributed only as signed binaries, or forked for a stable build.
 
 ## Formulae
 
+### cliproxyapi
+
+[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI), the local AI
+gateway. homebrew-core carries it too, but its livecheck is throttled to every
+fifth tag while upstream ships several releases a day. This formula tracks
+every release from the prebuilt archives and their published `checksums.txt`.
+It conflicts with the core formula; uninstall that one first.
+
+```sh
+brew install N4M3Z/tap/cliproxyapi
+brew services start N4M3Z/tap/cliproxyapi
+```
+
+Config stays at `$(brew --prefix)/etc/cliproxyapi.conf`; the service passes
+`-config` because the prebuilt binary otherwise reads `./config.yaml`.
+
+### cpa-manager-plus
+
+[CPA-Manager-Plus](https://github.com/seakee/CPA-Manager-Plus), the usage
+dashboard beside CLIProxyAPI. Upstream ships binaries only, no Homebrew
+formula. Data lives in `~/.cpa-manager-plus`.
+
+```sh
+brew install N4M3Z/tap/cpa-manager-plus
+brew services start N4M3Z/tap/cpa-manager-plus
+```
+
 ### otel-tui
 
 Terminal OpenTelemetry viewer. A verbatim rebuild of upstream
@@ -40,6 +67,15 @@ proton-drive auth login
 ```
 
 Not to be confused with the `proton-drive` Homebrew cask, which is the GUI app.
+
+## Release bumps
+
+`bin/bump-release Formula/<name>.rb` rewrites a binary-release formula to the
+latest GitHub release, taking every `sha256` from the release's
+`checksums.txt`. The `bump releases` workflow runs it every six hours and
+opens a pull request per bumped formula, so `brew test-bot` runs before the
+change reaches `main`. Merge the pull request, then `brew update` and
+`brew upgrade` as usual.
 
 ## Install
 
