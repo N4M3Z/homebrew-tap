@@ -1,0 +1,21 @@
+README.md
+  s_626693e6b1dc58::t_6f744365abfa52 15-41
+  s_626693e6b1dc58::t_861948c16edd20 71-78
+  s_626693e6b1dc58::t_09f8b05a23637b 79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "4b4f7222f81ea10b567fb68f117971186b89ebd9",
+  "prompts": {},
+  "sessions": {
+    "s_626693e6b1dc58": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fdcdc22-5778-4267-8bbf-6ad8d9c7b385",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Martin Zeman <N4M3Z@users.noreply.github.com>"
+    }
+  }
+}
