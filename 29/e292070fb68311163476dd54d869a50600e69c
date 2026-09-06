@@ -1,0 +1,34 @@
+bin/bump-release
+  s_626693e6b1dc58::t_deacca19ea83df 29-33
+  s_626693e6b1dc58::t_df33fbb3f2ab53 1-11,13-28,34-68
+  s_626693e6b1dc58::t_80b4364614aada 12
+Formula/cliproxyapi.rb
+  s_626693e6b1dc58::t_70b99b93a83499 1-54
+README.md
+  s_626693e6b1dc58::t_6f744365abfa52 15-41
+  s_626693e6b1dc58::t_861948c16edd20 71-79
+Formula/cpa-manager-plus.rb
+  s_626693e6b1dc58::t_c3e5c160e7e449 18-24
+  s_626693e6b1dc58::t_054e72e13bb863 1-17,25-62
+.gitignore
+  s_626693e6b1dc58::t_200f47a68e7eb6 1-3
+.github/workflows/bump.yml
+  s_626693e6b1dc58::t_f19105f8af0d4f 1-43,45-69
+  s_626693e6b1dc58::t_450647ce8a87c3 44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "29e292070fb68311163476dd54d869a50600e69c",
+  "prompts": {},
+  "sessions": {
+    "s_626693e6b1dc58": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fdcdc22-5778-4267-8bbf-6ad8d9c7b385",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Martin Zeman <N4M3Z@users.noreply.github.com>"
+    }
+  }
+}
