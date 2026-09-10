@@ -26,7 +26,20 @@ jobs:
       matrix:
         formula: [cliproxyapi, cpa-manager-plus]
     steps:
+      # The token is minted before the checkout on purpose. actions/checkout
+      # writes an http.extraheader auth entry into the local git config, and
+      # that header beats any credential in the remote URL. Checking out with
+      # the App token is the only way a later push acts as runewright[bot].
+      - name: Mint Runewright token
+        id: app
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ secrets.RUNEWRIGHT_APP_ID }}
+          private-key: ${{ secrets.RUNEWRIGHT_APP_KEY }}
+
       - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app.outputs.token }}
 
       - name: Bump formula
         id: bump
@@ -37,14 +50,6 @@ jobs:
           echo "$out"
           version=${out##* }
           [ -n "$out" ] && echo "version=$version" >> "$GITHUB_OUTPUT" || true
-
-      - name: Mint Runewright token
-        if: steps.bump.outputs.version != ''
-        id: app
-        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
-        with:
-          app-id: ${{ secrets.RUNEWRIGHT_APP_ID }}
-          private-key: ${{ secrets.RUNEWRIGHT_APP_KEY }}
 
       - name: Open pull request
         if: steps.bump.outputs.version != ''
@@ -60,11 +65,6 @@ jobs:
           fi
           git config user.name "runewright[bot]"
           git config user.email "runewright[bot]@users.noreply.github.com"
-          # actions/checkout stores the GITHUB_TOKEN credential, which cannot
-          # push here. GH_TOKEN only reaches the gh CLI, so point the remote at
-          # the App token as well.
-          git remote set-url origin \
-            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git switch -c "$branch"
           git add "Formula/$FORMULA.rb"
           git commit -m "chore: $FORMULA $VERSION" -- "Formula/$FORMULA.rb"
