@@ -60,6 +60,11 @@ jobs:
           fi
           git config user.name "runewright[bot]"
           git config user.email "runewright[bot]@users.noreply.github.com"
+          # actions/checkout stores the GITHUB_TOKEN credential, which cannot
+          # push here. GH_TOKEN only reaches the gh CLI, so point the remote at
+          # the App token as well.
+          git remote set-url origin \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git switch -c "$branch"
           git add "Formula/$FORMULA.rb"
           git commit -m "chore: $FORMULA $VERSION" -- "Formula/$FORMULA.rb"
