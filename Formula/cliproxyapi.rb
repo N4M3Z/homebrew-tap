@@ -26,6 +26,10 @@ class Cliproxyapi < Formula
     end
   end
 
+  # Only the darwin archives are pinned below, so the formula has no url on
+  # Linux and brew reads it as malformed there. This marks it macOS-only.
+  depends_on :macos
+
   conflicts_with "cliproxyapi", because: "homebrew-core ships the same binary and config path"
 
   service do

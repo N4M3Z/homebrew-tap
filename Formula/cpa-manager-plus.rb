@@ -24,6 +24,10 @@ class CpaManagerPlus < Formula
     end
   end
 
+  # Only the darwin archives are pinned above, so the formula has no url on
+  # Linux and brew reads it as malformed there. This marks it macOS-only.
+  depends_on :macos
+
   service do
     run opt_bin/"cpa-manager-plus"
     keep_alive true

@@ -15,8 +15,9 @@ cask "zed-dev" do
   # The dev channel never self-updates from this fork, so every upgrade is a
   # new cask version. Built only for Apple silicon.
   auto_updates false
+  # arm64 already implies Big Sur or newer, so no macos: minimum is needed.
+  # The former `macos: :catalina` is disabled now that the release is EOL.
   depends_on arch: :arm64
-  depends_on macos: :catalina
 
   app "Zed Dev.app"
 
