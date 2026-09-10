@@ -15,12 +15,12 @@ class CpaManagerPlus < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.12.10/cpa-manager-plus_v1.12.10_darwin_arm64.tar.gz"
-      sha256 "e49c7c61207bfa1ffeaf84fa0ed0b0eda0181d2743935000d962afc86fcd12d6"
+      url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.12.11/cpa-manager-plus_v1.12.11_darwin_arm64.tar.gz"
+      sha256 "c9dea3031e983fd09b6ee62290de987c59be9623c498913f42db81528e2376a1"
     end
     on_intel do
-      url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.12.10/cpa-manager-plus_v1.12.10_darwin_amd64.tar.gz"
-      sha256 "6f8013e7b8cb450fcca7e94405b531e09056bafa5b2c81eb6b92b1cbdb87bae4"
+      url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.12.11/cpa-manager-plus_v1.12.11_darwin_amd64.tar.gz"
+      sha256 "60a8c1890f11cbb2d26cdf451bcb6c1c598a0176cf8fb9d9f5d4c9817973846b"
     end
   end
 
