@@ -1,0 +1,19 @@
+.github/workflows/bump.yml
+  s_626693e6b1dc58::t_57cf63bfd3535a 63-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a402da9e654d1d0f754d52a8886817d0ea838df7",
+  "prompts": {},
+  "sessions": {
+    "s_626693e6b1dc58": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fdcdc22-5778-4267-8bbf-6ad8d9c7b385",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Martin Zeman <N4M3Z@users.noreply.github.com>"
+    }
+  }
+}
