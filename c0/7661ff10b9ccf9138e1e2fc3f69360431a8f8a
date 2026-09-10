@@ -1,0 +1,23 @@
+Casks/zed-dev.rb
+  s_626693e6b1dc58::t_ead6ec030c03eb 18-19
+Formula/cpa-manager-plus.rb
+  s_626693e6b1dc58::t_c9b4b7c5ff7e9e 27-30
+Formula/cliproxyapi.rb
+  s_626693e6b1dc58::t_a2d676f9b49a01 29-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c07661ff10b9ccf9138e1e2fc3f69360431a8f8a",
+  "prompts": {},
+  "sessions": {
+    "s_626693e6b1dc58": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7fdcdc22-5778-4267-8bbf-6ad8d9c7b385",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Martin Zeman <N4M3Z@users.noreply.github.com>"
+    }
+  }
+}
