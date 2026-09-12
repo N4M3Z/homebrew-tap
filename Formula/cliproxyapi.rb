@@ -7,7 +7,7 @@
 class Cliproxyapi < Formula
   desc "Wrap Gemini CLI, Codex, Claude Code, Qwen Code as an API service"
   homepage "https://github.com/router-for-me/CLIProxyAPI"
-  version "7.2.156"
+  version "7.2.159"
   license "MIT"
 
   livecheck do
@@ -17,12 +17,12 @@ class Cliproxyapi < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v7.2.156/CLIProxyAPI_7.2.156_darwin_aarch64.tar.gz"
-      sha256 "c41f985edc744a70dc962ec4250889bad02bdd9be816855021d4d0d93ddf4c92"
+      url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v7.2.159/CLIProxyAPI_7.2.159_darwin_aarch64.tar.gz"
+      sha256 "ff6df9e2181bdc13deb011e935eecfeea10b03fde1cb896aa5db1f2a172d625d"
     end
     on_intel do
-      url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v7.2.156/CLIProxyAPI_7.2.156_darwin_amd64.tar.gz"
-      sha256 "fe7c13292219b25f427015ef01e6d98649da1c97a6c4b59a2dbee3e540c2129f"
+      url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v7.2.159/CLIProxyAPI_7.2.159_darwin_amd64.tar.gz"
+      sha256 "7dd08aba651f6b4fa3a1ec2e3af7e6b47df0aa46b1f9c400b759588a8911fcee"
     end
   end
 
