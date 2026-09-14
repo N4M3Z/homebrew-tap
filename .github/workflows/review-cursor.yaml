@@ -1,0 +1,37 @@
+name: Review Cursor
+
+# Thin caller: the cursor summon lives in runedeck/seer. pull_request_target,
+# deliberately: the lane is API-only and checks out nothing, and fork pull
+# requests need the base-context secrets. Never add a head checkout here or
+# in the body.
+# ready_for_review releases a summon that was applied while the pull
+# request was a draft: the lane body skips drafts and re-reads the live
+# labels, so the label waits until readiness. Removing review:cursor
+# cancels a summon that has not fired; a posted summon is Cursor's own
+# round, which nothing here cancels.
+on:
+    pull_request_target:
+        types: [labeled, ready_for_review]
+
+permissions:
+    contents: read
+    pull-requests: write
+    issues: write
+
+# The label name is part of the group. Every labeled event starts a run,
+# and GitHub keeps one pending run per group: with a shared group, an
+# unrelated label event evicts a queued review:cursor summon. Per-label
+# groups keep unrelated events out of the summon's queue.
+concurrency:
+    group: review-cursor-${{ github.event.pull_request.number }}-${{ github.event.label.name || 'ready' }}
+    cancel-in-progress: false
+
+jobs:
+    summon:
+        # skip:cursor is the owner override: the lane never runs under it.
+        if: github.event.pull_request.draft == false && !contains(github.event.pull_request.labels.*.name, 'skip:cursor') && ((github.event.action == 'labeled' && github.event.label.name == 'review:cursor') || (github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'review:cursor')))
+        uses: runedeck/seer/.github/workflows/review-cursor.yaml@main
+        secrets:
+            # Cursor ignores bot-authored review comments; the summon posts
+            # with this owner-minted token instead.
+            RUNEWRIGHT_GITHUB_TOKEN: ${{ secrets.RUNEWRIGHT_GITHUB_TOKEN }}

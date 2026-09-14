@@ -1,0 +1,110 @@
+# One universal config for every scaffolded repository: each hook gates on
+# the file types present in the change, so hooks for absent languages never
+# fire and language templates carry no lint config of their own.
+# Sealed adoption evidence stays byte-stable under every hook.
+repos:
+    - repo: builtin
+      hooks:
+          # Everything under .provenance/ is sealed, digest-bound evidence:
+          # an auto-fixing hook that rewrites it destroys what it touches.
+          # All records remain covered by validators and secret scanning.
+          - id: trailing-whitespace
+            exclude: '(^|/)\.provenance/'
+          - id: check-yaml
+            exclude: ^templates/
+          - id: check-json
+
+    - repo: local
+      hooks:
+          # A labeled begin or end marker is never legitimate text, so each
+          # blocks alone and a partially resolved conflict still fails; only
+          # a bare ======= is setext-ambiguous and passes.
+          - id: check-conflict-markers
+            name: conflict markers
+            entry: sh -c 'status=0; for file in "$@"; do if grep -n -E "^(<<<<<<< |>>>>>>> )" "$file"; then status=1; fi; done; exit "$status"' --
+            language: system
+            types: [text]
+
+          - id: check-reject-files
+            name: reject files
+            entry: sh -c 'rejects=$(git ls-files --cached --others --exclude-standard -- "*.rej"); [ -z "$rejects" ] || { printf "%s\n" "$rejects"; exit 1; }'
+            language: system
+            pass_filenames: false
+
+          - id: shellcheck
+            name: shellcheck
+            entry: shellcheck -S warning
+            language: system
+            types: [shell]
+
+          - id: ruff
+            name: ruff check
+            entry: ruff check .
+            language: system
+            pass_filenames: false
+            types: [python]
+
+          - id: cargo-fmt
+            name: cargo fmt
+            entry: cargo fmt --check
+            language: system
+            pass_filenames: false
+            types: [rust]
+
+          - id: cargo-clippy
+            name: cargo clippy
+            entry: cargo clippy --all-targets --all-features -- -D warnings
+            language: system
+            pass_filenames: false
+            types: [rust]
+
+          - id: tsc
+            name: tsc --noEmit
+            entry: npx tsc --noEmit
+            language: system
+            pass_filenames: false
+            types: [ts]
+
+          - id: gitleaks
+            name: gitleaks (staged)
+            entry: gitleaks git --staged --pre-commit --no-banner
+            language: system
+            pass_filenames: false
+            stages: [pre-commit]
+
+          - id: rune-validate
+            name: rune validate
+            entry: sh -c 'if command -v rune >/dev/null 2>&1 && { [ -f module.yaml ] || [ -f deck.yaml ] || [ -f .rune ]; }; then rune validate; fi'
+            language: system
+            pass_filenames: false
+
+          - id: cargo-test
+            name: cargo test
+            entry: cargo test --all-features
+            language: system
+            pass_filenames: false
+            types: [rust]
+            stages: [pre-push]
+
+          - id: semgrep
+            name: semgrep OWASP
+            entry: semgrep scan --config=p/owasp-top-ten --metrics=off --disable-version-check --quiet .
+            language: system
+            pass_filenames: false
+            stages: [pre-push]
+
+          - id: gitleaks-range
+            name: gitleaks (push range)
+            entry: sh -c 'if [ -n "${PRE_COMMIT_FROM_REF:-}" ]; then gitleaks git --no-banner --log-opts "${PRE_COMMIT_FROM_REF}..${PRE_COMMIT_TO_REF:-HEAD}"; elif [ -n "${GITLEAKS_PUSH_TO_REF:-}" ]; then gitleaks git --no-banner --log-opts "$GITLEAKS_PUSH_TO_REF"; else bash .githooks/pre-commit --scan-only; fi'
+            language: system
+            pass_filenames: false
+            stages: [pre-push]
+
+          # The same rules as the ci/authorship workflow, applied before the
+          # push so a bad identity fails as a local amend, not a CI rewrite.
+          - id: check-authorship
+            name: authorship (push range)
+            entry: bash scripts/check-authorship
+            language: system
+            pass_filenames: false
+            stages: [pre-push]

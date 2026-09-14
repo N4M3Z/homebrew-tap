@@ -1,0 +1,50 @@
+#!/bin/bash
+# ci-status: one command that answers "why is CI red".
+#
+#   scripts/ci-status [PR-NUMBER]     list every check for the pull request
+#                                     of the current branch, or for PR-NUMBER
+#   scripts/ci-status --job-id <id>   print one job's log tail, error lines first
+#
+# The log tail is truncated to the last 20000 characters, in the pattern of
+# the Proton devex bot's job_log helper.
+set -o pipefail
+
+TAIL_CHARS=20000
+
+if [ "${1:-}" = "--job-id" ]; then
+    job="${2:-}"
+    [ -n "$job" ] || { echo "usage: ci-status --job-id <id>"; exit 2; }
+    log=$(gh run view --job "$job" --log 2>/dev/null) \
+        || { echo "could not read the log for job $job"; exit 1; }
+    errors=$(printf '%s\n' "$log" | grep -iE 'error|fail|✗|##\[error\]' | grep -vE 'TRACE|DEBUG' | tail -n 40)
+    if [ -n "$errors" ]; then
+        echo "== error lines (last 40):"
+        printf '%s\n' "$errors"
+        echo
+    fi
+    echo "== log tail (last $TAIL_CHARS characters):"
+    printf '%s\n' "$log" | tail -c "$TAIL_CHARS"
+    exit 0
+fi
+
+pr="${1:-}"
+if [ -n "$pr" ]; then
+    checks=$(gh pr checks "$pr" 2>/dev/null)
+else
+    checks=$(gh pr checks 2>/dev/null)
+fi
+if [ -z "$checks" ]; then
+    echo "no pull request checks found; falling back to the latest runs on this branch:"
+    branch=$(git rev-parse --abbrev-ref HEAD)
+    gh run list --branch "$branch" --limit 10
+    exit 0
+fi
+printf '%s\n' "$checks"
+echo
+failing=$(printf '%s\n' "$checks" | awk -F'\t' '$2 == "fail" {print $1 "\t" $4}')
+if [ -n "$failing" ]; then
+    echo "== failing checks (open the URL, or run: ci-status --job-id <id> with the job id from the URL):"
+    printf '%s\n' "$failing"
+else
+    echo "== no failing checks."
+fi

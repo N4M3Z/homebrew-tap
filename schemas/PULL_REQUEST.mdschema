@@ -1,0 +1,28 @@
+# Pull request body schema: summary sentence, then Plan / Changes / Testing /
+# Release Notes. Changes bullets are verb-first, factual, and file-anchored:
+# claims the diff upholds, in the register a diff summarizer would use. The
+# notes section feeds the release body at tag time; `- N/A` is the legal
+# entry for work with no user-facing effect.
+#
+# Heading patterns are literal matches against the full heading line; the
+# validator treats pattern as a regex only when regex: true accompanies it.
+
+heading_rules:
+    no_skip_levels: false
+    max_depth: 2
+
+structure:
+    - heading:
+          pattern: "## Plan"
+    - heading:
+          pattern: "## Changes"
+      lists:
+          - min: 1
+    - heading:
+          pattern: "## Testing"
+      lists:
+          - min: 1
+    - heading:
+          pattern: "## Release Notes"
+      lists:
+          - min: 1

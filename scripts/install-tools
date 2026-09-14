@@ -1,0 +1,250 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_directory=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
+# shellcheck source=tool-versions
+source "$script_directory/tool-versions"
+readonly INSTALL_DIRECTORY="${HOME}/.local/bin"
+
+log() {
+    printf '%s\n' "$*"
+}
+
+fail() {
+    printf 'fatal: %s\n' "$*" >&2
+    exit 1
+}
+
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+run_privileged() {
+    if [ "$(id -u)" -eq 0 ]; then
+        "$@"
+    elif command_exists sudo; then
+        sudo "$@"
+    else
+        fail "administrator access is required to install system packages: $*"
+    fi
+}
+
+version_output() {
+    case "$1" in
+        gitleaks) gitleaks version 2>&1 ;;
+        mdschema) mdschema version 2>&1 ;;
+        semgrep)
+            XDG_CONFIG_HOME="${TMPDIR:-/tmp}/rune-semgrep-config" \
+                XDG_CACHE_HOME="${TMPDIR:-/tmp}/rune-semgrep-cache" \
+                SEMGREP_ENABLE_VERSION_CHECK=0 semgrep --version 2>&1
+            ;;
+        *) "$1" --version 2>&1 ;;
+    esac
+}
+
+tool_matches_version() {
+    local command_name=$1
+    local expected_version=$2
+    command_exists "$command_name" || return 1
+    version_output "$command_name" \
+        | grep -Eq "(^|[^0-9])${expected_version//./\\.}([^0-9]|$)"
+}
+
+all_tools_match() {
+    tool_matches_version prek "$PREK_VERSION" \
+        && tool_matches_version gitleaks "$GITLEAKS_VERSION" \
+        && command_exists shellcheck \
+        && tool_matches_version copier "$COPIER_VERSION" \
+        && tool_matches_version ruff "$RUFF_VERSION" \
+        && tool_matches_version semgrep "$SEMGREP_VERSION" \
+        && tool_matches_version mdschema "$MDSCHEMA_VERSION"
+}
+
+brew_install() {
+    local specification=$1
+    brew list --formula "$specification" >/dev/null 2>&1 || brew install "$specification"
+}
+
+install_with_brew() {
+    brew_install shellcheck
+    brew_install pipx
+    install_python_tool prek "$PREK_VERSION"
+    install_python_tool copier "$COPIER_VERSION"
+    install_python_tool ruff "$RUFF_VERSION"
+    install_python_tool semgrep "$SEMGREP_VERSION"
+    install_gitleaks
+    install_mdschema
+}
+
+install_linux_prerequisites() {
+    if command_exists apt-get; then
+        run_privileged apt-get update
+        run_privileged apt-get install -y ca-certificates curl pipx shellcheck tar
+    elif command_exists dnf; then
+        run_privileged dnf install -y ca-certificates curl pipx ShellCheck tar
+    elif command_exists pacman; then
+        run_privileged pacman -Sy --needed --noconfirm ca-certificates curl python-pipx shellcheck tar
+    else
+        fail "Linux setup needs Homebrew or a supported package manager (apt-get, dnf, pacman)"
+    fi
+}
+
+install_python_tool() {
+    local command_name=$1
+    local version=$2
+    local package_spec="${command_name}==${version}"
+
+    tool_matches_version "$command_name" "$version" && return
+    command_exists pipx || fail "pipx is required to install $command_name"
+
+    log "Installing $package_spec with pipx"
+    if command_exists "$command_name"; then
+        pipx install --force "$package_spec"
+    else
+        pipx install "$package_spec"
+    fi
+    export PATH="$INSTALL_DIRECTORY:$PATH"
+    tool_matches_version "$command_name" "$version" \
+        || fail "$command_name $version was installed but is not available on PATH"
+}
+
+archive_digest() {
+    local tool_name=$1
+    local system_name=$2
+    local machine_name=$3
+    local variable_name
+    variable_name=$(printf '%s_%s_%s_SHA256' "$tool_name" "$system_name" "$machine_name" \
+        | tr '[:lower:]' '[:upper:]')
+    printf '%s\n' "${!variable_name:?missing reviewed digest $variable_name}"
+}
+
+verified_archive() {
+    local archive_url=$1
+    local archive_name=$2
+    local expected_digest=$3
+    local binary_name=$4
+    local scratch_directory
+    scratch_directory=$(mktemp -d "${TMPDIR:-/tmp}/rune-tools.XXXXXX")
+
+    if ! (
+        set -e
+        curl -fsSL "$archive_url" -o "$scratch_directory/$archive_name"
+        printf '%s  %s\n' "$expected_digest" "$archive_name" \
+            > "$scratch_directory/selected-checksum"
+        cd "$scratch_directory"
+        if command_exists sha256sum; then
+            sha256sum --check selected-checksum
+        elif command_exists shasum; then
+            shasum -a 256 --check selected-checksum
+        else
+            exit 1
+        fi
+        tar -xzf "$archive_name"
+        extracted_binary=$(find . -type f -name "$binary_name" -perm -u+x -print -quit)
+        [ -n "$extracted_binary" ]
+        mkdir -p "$INSTALL_DIRECTORY"
+        install -m 0755 "$extracted_binary" "$INSTALL_DIRECTORY/$binary_name"
+    ); then
+        command rm -rf "$scratch_directory"
+        fail "could not install verified archive $archive_name"
+    fi
+
+    command rm -rf "$scratch_directory"
+    export PATH="$INSTALL_DIRECTORY:$PATH"
+}
+
+platform() {
+    case "$(uname -s)" in
+        Darwin) printf 'darwin\n' ;;
+        Linux) printf 'linux\n' ;;
+        *) fail "unsupported operating system: $(uname -s)" ;;
+    esac
+}
+
+architecture() {
+    case "$(uname -m)" in
+        arm64|aarch64) printf 'arm64\n' ;;
+        x86_64|amd64) printf 'amd64\n' ;;
+        *) fail "unsupported architecture: $(uname -m)" ;;
+    esac
+}
+
+install_gitleaks() {
+    tool_matches_version gitleaks "$GITLEAKS_VERSION" && return
+
+    local system_name machine_name asset_machine archive_name digest
+    system_name=$(platform)
+    machine_name=$(architecture)
+    case "$system_name:$machine_name" in
+        darwin:amd64|linux:amd64) asset_machine="x64" ;;
+        darwin:arm64|linux:arm64) asset_machine="arm64" ;;
+        *) fail "gitleaks has no supported archive for $system_name/$machine_name" ;;
+    esac
+
+    archive_name="gitleaks_${GITLEAKS_VERSION}_${system_name}_${asset_machine}.tar.gz"
+    digest=$(archive_digest gitleaks "$system_name" "$machine_name")
+    log "Installing digest-verified gitleaks $GITLEAKS_VERSION"
+    verified_archive \
+        "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive_name}" \
+        "$archive_name" "$digest" gitleaks
+}
+
+install_mdschema() {
+    tool_matches_version mdschema "$MDSCHEMA_VERSION" && return
+
+    local system_name machine_name archive_name digest
+    system_name=$(platform)
+    machine_name=$(architecture)
+    archive_name="mdschema_${MDSCHEMA_VERSION}_${system_name}_${machine_name}.tar.gz"
+    digest=$(archive_digest mdschema "$system_name" "$machine_name")
+    log "Installing digest-verified mdschema $MDSCHEMA_VERSION"
+    verified_archive \
+        "https://github.com/jackchuka/mdschema/releases/download/v${MDSCHEMA_VERSION}/${archive_name}" \
+        "$archive_name" "$digest" mdschema
+}
+
+verify_tools() {
+    local failures=()
+
+    tool_matches_version prek "$PREK_VERSION" || failures+=("prek $PREK_VERSION")
+    tool_matches_version gitleaks "$GITLEAKS_VERSION" || failures+=("gitleaks $GITLEAKS_VERSION")
+    command_exists shellcheck || failures+=("shellcheck")
+    tool_matches_version copier "$COPIER_VERSION" || failures+=("copier $COPIER_VERSION")
+    tool_matches_version ruff "$RUFF_VERSION" || failures+=("ruff $RUFF_VERSION")
+    tool_matches_version semgrep "$SEMGREP_VERSION" || failures+=("semgrep $SEMGREP_VERSION")
+    tool_matches_version mdschema "$MDSCHEMA_VERSION" || failures+=("mdschema $MDSCHEMA_VERSION")
+
+    [ "${#failures[@]}" -eq 0 ] \
+        || fail "setup finished without the pinned toolchain: ${failures[*]}"
+}
+
+main() {
+    local original_path=$PATH
+    export PATH="$INSTALL_DIRECTORY:$PATH"
+
+    if ! all_tools_match; then
+        if command_exists brew; then
+            install_with_brew
+        else
+            [ "$(platform)" = "linux" ] \
+                || fail "macOS setup requires Homebrew: https://brew.sh"
+            install_linux_prerequisites
+            install_python_tool prek "$PREK_VERSION"
+            install_python_tool copier "$COPIER_VERSION"
+            install_python_tool ruff "$RUFF_VERSION"
+            install_python_tool semgrep "$SEMGREP_VERSION"
+            install_gitleaks
+            install_mdschema
+        fi
+
+        verify_tools
+    fi
+
+    log "Pinned repository check tools are installed."
+    case ":$original_path:" in
+        *":$INSTALL_DIRECTORY:"*) ;;
+        *) log "Add $INSTALL_DIRECTORY to PATH before running repository checks." ;;
+    esac
+}
+
+main "$@"

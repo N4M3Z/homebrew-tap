@@ -1,0 +1,18 @@
+name: Congrats
+
+# Thin caller: the greeting lives in runedeck/seer.
+on:
+    push:
+        branches: [main]
+
+permissions:
+    contents: read
+    pull-requests: read
+    issues: write
+
+jobs:
+    congrats:
+        uses: runedeck/seer/.github/workflows/congrats.yaml@main
+        secrets:
+            RUNEWRIGHT_APP_ID: ${{ secrets.RUNEWRIGHT_APP_ID }}
+            RUNEWRIGHT_APP_KEY: ${{ secrets.RUNEWRIGHT_APP_KEY }}

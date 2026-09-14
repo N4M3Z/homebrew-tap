@@ -1,0 +1,90 @@
+name: Quality
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+concurrency:
+    group: quality-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+    pull-requests: read
+
+jobs:
+    quality:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+              with:
+                  fetch-depth: 0
+                  # The prek hooks execute code from the checked-out tree, which
+                  # must never find a usable token in the git config.
+                  persist-credentials: false
+
+            # Third-party actions must be pinned to a full commit SHA;
+            # first-party paths (./) and runedeck/* refs are exempt.
+            - name: Action pinning
+              run: |
+                  # Comments are stripped before the SHA test so trailing
+                  # text cannot fake a pin.
+                  violations=$(grep -RnE '^[[:space:]]*-?[[:space:]]*uses:[[:space:]]*["'\'']?[^./[:space:]"'\'']' .github/workflows 2>/dev/null \
+                      | sed 's/[[:space:]]#.*$//' \
+                      | grep -vE 'uses:[[:space:]]*["'\'']?(\./|runedeck/)' \
+                      | grep -vE '@[0-9a-f]{40}["'\'']?$' || true)
+                  if [ -n "$violations" ]; then
+                      echo "Unpinned third-party actions:"
+                      printf '%s\n' "$violations"
+                      exit 1
+                  fi
+                  echo "All third-party actions pinned."
+
+            - name: Release notes attestation
+              if: github.event_name == 'pull_request'
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  # The fetch and the parse fail separately: an API or
+                  # permission fault must not read as a missing section.
+                  body=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" --jq '.body // ""') \
+                      || { echo "could not read the pull request body (API or permission failure)"; exit 1; }
+                  if printf '%s\n' "$body" \
+                      | awk '/^## Release Notes[[:space:]]*$/{in_section=1; next} /^## /{in_section=0} in_section && /^([-*+]|[0-9]+[.)]) /{found=1} END{exit !found}'; then
+                      echo "Release Notes section present."
+                  else
+                      echo "The pull request body needs a '## Release Notes' section with at least one entry ('- N/A' for non-user-facing work)."
+                      exit 1
+                  fi
+
+            # Local hooks, generated CI, and template updates all consume the
+            # same reviewed tool versions and archive digests.
+            - name: Install tools
+              run: bash scripts/install-tools
+
+            # The prek CLI is called directly: the wrapper action logs at
+            # TRACE level and buries the failing hook's output.
+            - name: Commit-stage checks
+              run: prek run --all-files
+
+            # Scan exactly the commits this event introduces. Without a usable
+            # base, gitleaks scans the target history and other hooks inspect all files.
+            - name: Pre-push-stage checks
+              run: |
+                  if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+                      from="${{ github.event.pull_request.base.sha }}"
+                      to="${{ github.event.pull_request.head.sha }}"
+                  elif [ -n "${{ github.event.before }}" ] && ! printf '%s' "${{ github.event.before }}" | grep -q '^0*$'; then
+                      from="${{ github.event.before }}"
+                      to="${{ github.sha }}"
+                  else
+                      from=""
+                      to="${{ github.sha }}"
+                  fi
+                  if [ -n "$from" ] && git cat-file -e "$from" 2>/dev/null; then
+                      prek run --stage pre-push --from-ref "$from" --to-ref "$to"
+                  else
+                      GITLEAKS_PUSH_TO_REF="$to" prek run --stage pre-push --all-files
+                  fi

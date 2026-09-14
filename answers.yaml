@@ -1,0 +1,7 @@
+# Changes here will be overwritten by Copier; never edit manually.
+BRIEF: Personal Homebrew tap for formulae that are not in homebrew-core.
+NAME: homebrew-tap
+OWNER: N4M3Z
+TITLE: N4M3Z Homebrew Tap
+_commit: fed35f2
+_src_path: https://github.com/runedeck/skeleton.git

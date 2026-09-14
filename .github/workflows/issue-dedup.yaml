@@ -1,0 +1,15 @@
+name: Issue Dedup
+
+# Thin caller: duplicate-issue triage lives in runedeck/seer.
+on:
+    issues:
+        types: [opened]
+
+permissions:
+    contents: read
+    issues: write
+    models: read
+
+jobs:
+    dedup:
+        uses: runedeck/seer/.github/workflows/issue-dedup.yaml@main

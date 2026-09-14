@@ -1,0 +1,31 @@
+name: Review PR-Agent
+
+# Thin caller: the pr-agent lane lives in runedeck/seer. pull_request_target,
+# deliberately: the lane runs PR-Agent in command mode from a pinned image
+# and checks out nothing, and it needs the base-context model key. Never
+# add a head checkout here or in the body.
+# ready_for_review releases a summon that was applied while the pull
+# request was a draft: the lane body skips drafts and re-reads the live
+# labels, so the label waits until readiness.
+on:
+    pull_request_target:
+        types: [labeled, ready_for_review]
+
+permissions:
+    contents: read
+    pull-requests: write
+    issues: write
+
+# Per-label concurrency groups keep unrelated label events out of the
+# summon's queue, as in the other single-lane callers.
+concurrency:
+    group: review-pragent-${{ github.event.pull_request.number }}-${{ github.event.label.name || 'ready' }}
+    cancel-in-progress: false
+
+jobs:
+    review:
+        # skip:pr-agent is the owner override: the lane never runs under it.
+        if: github.event.pull_request.draft == false && !contains(github.event.pull_request.labels.*.name, 'skip:pr-agent') && ((github.event.action == 'labeled' && github.event.label.name == 'review:pr-agent') || (github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'review:pr-agent')))
+        uses: runedeck/seer/.github/workflows/review-pragent.yaml@main
+        secrets:
+            PR_AGENT_MODEL_KEY: ${{ secrets.PR_AGENT_MODEL_KEY }}

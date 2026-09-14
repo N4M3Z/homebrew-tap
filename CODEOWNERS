@@ -1,0 +1,5 @@
+# Every path has an explicit owner; unowned paths are forbidden.
+# N4M3Z must be a user or an org team (@org/team); GitHub rejects a bare
+# organization account as a code owner, which silently disables required
+# code-owner review.
+* @N4M3Z

@@ -1,0 +1,95 @@
+#!/bin/bash
+# Check commit attribution with the trusted base policy.
+# CI supplies its base policy path. Local checks read origin/main.
+set -o pipefail
+
+from="${PRE_COMMIT_FROM_REF:-}"
+to="${PRE_COMMIT_TO_REF:-HEAD}"
+authors_file=""
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd) || exit 1
+helper="$script_dir/author-identity.py"
+
+usage() {
+    echo "usage: scripts/check-authorship [--from-ref <commit>] [--to-ref <commit>] [--authors-file <path>]" >&2
+    exit 2
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --from-ref)
+            [ "$#" -ge 2 ] || usage
+            from=$2
+            shift 2
+            ;;
+        --to-ref)
+            [ "$#" -ge 2 ] || usage
+            to=$2
+            shift 2
+            ;;
+        --authors-file)
+            [ "$#" -ge 2 ] || usage
+            authors_file=$2
+            shift 2
+            ;;
+        *) usage ;;
+    esac
+done
+
+if [ -n "$authors_file" ]; then
+    authors_source=$authors_file
+else
+    authors_source="origin/main:authors.yaml"
+    authors_file=$(mktemp) || exit 1
+    trap 'rm -f -- "$authors_file"' EXIT
+    trap 'exit 1' HUP INT TERM
+    git show "$authors_source" > "$authors_file" \
+        || { echo "check-authorship: cannot read $authors_source. Fetch origin/main."; exit 1; }
+fi
+python3 "$helper" check-policy --policy "$authors_file" || exit $?
+
+to_commit=$(git rev-parse --verify "$to^{commit}" 2>/dev/null) \
+    || { echo "check-authorship: cannot resolve target commit $to"; exit 1; }
+
+# A new remote branch has a zero from-ref.
+case "$from" in
+    '' | 0000000000000000000000000000000000000000)
+        from=$(git merge-base origin/main "$to_commit" 2>/dev/null) \
+            || { echo "check-authorship: cannot resolve origin/main. Set PRE_COMMIT_FROM_REF."; exit 1; }
+        ;;
+esac
+from_commit=$(git rev-parse --verify "$from^{commit}" 2>/dev/null) \
+    || { echo "check-authorship: cannot resolve base commit $from"; exit 1; }
+
+# Capture each Git read before its loop so a failed read fails the check.
+range=$(git log --format='%H' "$from_commit..$to_commit") \
+    || { echo "check-authorship: cannot list commits in $from_commit..$to_commit"; exit 1; }
+failures=0
+while IFS= read -r commit; do
+    [ -n "$commit" ] || continue
+    author=$(git show -s --format='%an <%ae>' "$commit") \
+        || { echo "$commit: cannot read author"; exit 1; }
+    author_key=""
+    if python3 "$helper" validate --policy "$authors_file" --identity "$author"; then
+        author_key=$(python3 "$helper" key --policy "$authors_file" --identity "$author") || exit 1
+    else
+        echo "$commit: author '$author' does not satisfy $authors_source"
+        failures=1
+    fi
+    trailers=$(git show -s --format='%(trailers:key=Co-Authored-By,valueonly)' "$commit") \
+        || { echo "$commit: cannot read Co-Authored-By trailers"; exit 1; }
+    while IFS= read -r trailer; do
+        [ -n "$trailer" ] || continue
+        if python3 "$helper" validate --policy "$authors_file" --identity "$trailer" --trailer; then
+            trailer_key=$(python3 "$helper" key --policy "$authors_file" --identity "$trailer") || exit 1
+            if [ "$trailer_key" = "$author_key" ]; then
+                echo "$commit: author repeated as Co-Authored-By"
+                failures=1
+            fi
+        else
+            echo "$commit: Co-Authored-By '$trailer' does not satisfy $authors_source"
+            failures=1
+        fi
+    done <<< "$trailers"
+done <<< "$range"
+[ "$failures" -ne 0 ] || echo "Every commit in $from_commit..$to_commit satisfies $authors_source."
+exit "$failures"

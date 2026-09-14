@@ -1,0 +1,73 @@
+name: Review Cascade
+
+# Thin caller: the review cascade lives in runedeck/seer. pull_request_target,
+# deliberately: the cascade is API-only and checks out nothing, and fork pull
+# requests need the base-context secrets. Never add a head checkout here
+# or in the body.
+on:
+    pull_request_target:
+        types: [opened, labeled, unlabeled, ready_for_review]
+
+# The body uses the workflow token to read check runs, the live head, and
+# review threads. PR label changes need pull-requests: write and issues: write.
+# Workflow-token label removal emits no event and cannot cancel the lane.
+permissions:
+    contents: read
+    checks: read
+    pull-requests: write
+    issues: write
+
+# A fresh review request replaces the active cascade.
+# Label removal cannot cancel a round after dispatch.
+concurrency:
+    group: review-cascade-${{ github.event.pull_request.number }}
+    cancel-in-progress: ${{ github.event.action == 'labeled' && github.event.label.name == 'review' }}
+
+jobs:
+    # A queued ready event keeps its label payload after another round
+    # consumed the review label, so readiness re-reads the live labels before
+    # the cascade may start.
+    release:
+        if: github.event.action == 'ready_for_review' && github.event.pull_request.draft == false && contains(github.event.pull_request.labels.*.name, 'review')
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        permissions:
+            contents: read
+            pull-requests: read
+            issues: read
+        outputs:
+            summoned: ${{ steps.live.outputs.summoned }}
+        steps:
+            - id: live
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  # Pages merge through jq -s so a label set past one page
+                  # still counts fully. pipefail plus the explicit failure
+                  # exit keep an API error from reading as a consumed review label.
+                  set -o pipefail
+                  labels=$(gh api --paginate "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels?per_page=100" \
+                      --jq '[.[].name]' | jq -s -r 'add // [] | .[]') \
+                      || { echo "could not read the live labels; rerun the check"; exit 1; }
+                  if printf '%s\n' "$labels" | grep -qx review; then
+                      echo "summoned=true" >> "$GITHUB_OUTPUT"
+                  else
+                      echo "summoned=false" >> "$GITHUB_OUTPUT"
+                      echo "the review label was already consumed; the cascade stands down."
+                  fi
+
+    cascade:
+        needs: release
+        # Fork pull requests keep the owner-summoned free lanes: a review
+        # label on a fork head runs the cascade, the correctness lane
+        # refuses fork heads on its own, and the ordered workflow stops
+        # after the free lanes (docs/specs/review-ceremony/spec.md, Fork
+        # pull request scenario). Only the free opened round is held to
+        # same-repository heads, so a fork spends nothing unlabeled.
+        if: '!cancelled() && github.event.pull_request.draft == false && ((github.event.action == ''opened'' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event.action == ''labeled'' && github.event.label.name == ''review'') || (github.event.action == ''ready_for_review'' && needs.release.outputs.summoned == ''true''))'
+        uses: runedeck/seer/.github/workflows/review-cascade.yaml@main
+        with:
+            macroscope_correctness_check: ${{ vars.MACROSCOPE_CORRECTNESS_CHECK }}
+        secrets:
+            RUNEWRIGHT_APP_ID: ${{ secrets.RUNEWRIGHT_APP_ID }}
+            RUNEWRIGHT_APP_KEY: ${{ secrets.RUNEWRIGHT_APP_KEY }}

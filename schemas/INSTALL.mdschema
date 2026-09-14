@@ -1,0 +1,32 @@
+# INSTALL.md schema: agent-executable install instructions (Mintlify shape)
+#
+# Heading patterns are literal matches unless regex: true accompanies them.
+# The word_count and lists constraints document intent; the validator
+# enforces heading presence today and the constraint enforcement is tracked
+# in the skeleton's ceremony rollout todo.
+
+heading_rules:
+    no_skip_levels: true
+    max_depth: 3
+
+structure:
+    - heading:
+          pattern: "^# .+"
+          regex: true
+      allow_additional: true
+      children:
+          - heading:
+                pattern: "## OBJECTIVE"
+            word_count:
+                min: 5
+          - heading:
+                pattern: "## DONE WHEN"
+            word_count:
+                min: 5
+          - heading:
+                pattern: "## TODO"
+            lists:
+                - min: 1
+          - heading:
+                pattern: "## Steps"
+            allow_additional: true

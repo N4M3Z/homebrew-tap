@@ -1,0 +1,20 @@
+name: Thread Resolver
+
+# Thin caller: trailer-driven resolution lives in runedeck/seer.
+# pull_request_target, deliberately: the body never checks out or
+# executes pull request code, and fork pull requests need the
+# base-context token's pull-requests write. Never add a head checkout.
+on:
+    pull_request_target:
+        types: [synchronize]
+
+permissions:
+    contents: read
+    pull-requests: write
+
+jobs:
+    resolve:
+        uses: runedeck/seer/.github/workflows/thread-resolver.yaml@main
+        secrets:
+            RUNESEER_APP_ID: ${{ secrets.RUNESEER_APP_ID }}
+            RUNESEER_APP_KEY: ${{ secrets.RUNESEER_APP_KEY }}

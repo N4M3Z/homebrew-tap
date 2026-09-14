@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+zero=0000000000000000000000000000000000000000
+hook_directory=$(dirname "$0")
+
+default_base() {
+    local head_reference
+    head_reference=$(git symbolic-ref -q refs/remotes/origin/HEAD 2>/dev/null || true)
+    if [ -z "$head_reference" ]; then
+        head_reference=refs/remotes/origin/main
+    fi
+    git merge-base "$1" "$head_reference" 2>/dev/null || true
+}
+
+check_range() {
+    local from_revision=$1
+    local to_revision=$2
+
+    if [ -z "$from_revision" ] && command -v prek >/dev/null 2>&1 && [ -f .pre-commit-config.yaml ]; then
+        PRE_COMMIT_TO_REF="$to_revision" GITLEAKS_PUSH_TO_REF="$to_revision" \
+            prek run --stage pre-push --all-files
+    elif [ -z "$from_revision" ] && command -v gitleaks >/dev/null 2>&1; then
+        gitleaks git --no-banner --log-opts "$to_revision"
+    elif command -v prek >/dev/null 2>&1 && [ -f .pre-commit-config.yaml ]; then
+        prek run --stage pre-push --from-ref "$from_revision" --to-ref "$to_revision"
+    elif command -v gitleaks >/dev/null 2>&1; then
+        gitleaks git --no-banner --log-opts "$from_revision..$to_revision"
+    else
+        echo "  error: neither prek nor gitleaks is available; push checks cannot run" >&2
+        echo "         run: make install" >&2
+        return 1
+    fi
+}
+
+if [ "$#" -eq 2 ] && [ -x "$hook_directory/pre-push.local" ]; then
+    "$hook_directory/pre-push.local" "$@" < /dev/null || true
+fi
+
+saw_ref_updates=0
+if [ ! -t 0 ]; then
+    while IFS=' ' read -r local_reference local_sha _ remote_sha; do
+        [ -z "${local_reference:-}" ] && continue
+        saw_ref_updates=1
+        [ "$local_sha" = "$zero" ] && continue
+        if [ "$remote_sha" = "$zero" ]; then
+            from_revision=$(default_base "$local_sha")
+        else
+            from_revision="$remote_sha"
+        fi
+        check_range "$from_revision" "$local_sha" < /dev/null
+    done
+fi
+
+if [ "$saw_ref_updates" -eq 0 ]; then
+    head_sha=$(git rev-parse HEAD 2>/dev/null || true)
+    [ -z "$head_sha" ] && exit 0
+    from_revision=$(default_base HEAD)
+    if [ -n "$from_revision" ] && [ "$from_revision" = "$head_sha" ]; then
+        exit 0
+    fi
+    check_range "$from_revision" "$head_sha"
+fi

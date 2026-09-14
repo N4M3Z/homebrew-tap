@@ -1,0 +1,17 @@
+# useDefault is required: a gitleaks config without it REPLACES the built-in
+# ruleset, silently disabling every secret rule. This keeps the defaults and
+# layers the allowlist on top.
+[extend]
+useDefault = true
+
+# The SpecStory allowlist covers only the untracked output directories; the
+# tracked project binding and configuration stay inside the scan. Patterns
+# anchor at the path start: an unanchored regex would exempt any file whose
+# path merely contains the substring.
+[allowlist]
+paths = [
+    "^\\.entire/.*",
+    "^\\.specstory/history/.*",
+    "^\\.specstory/debug/.*",
+    "^\\.jj/.*",
+]

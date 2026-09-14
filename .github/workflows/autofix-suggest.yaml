@@ -1,0 +1,81 @@
+name: Autofix Suggest
+
+# Thin caller: the untrusted autofix half lives in runedeck/seer. It runs
+# pull request code, so it triggers on pull_request and passes no secrets.
+on:
+    pull_request:
+        types: [labeled, unlabeled, ready_for_review]
+    workflow_dispatch:
+        inputs:
+            pr_number:
+                description: pull request number
+                required: true
+                type: string
+
+permissions:
+    contents: read
+
+concurrency:
+    group: review-autofix-${{ github.event.pull_request.number || inputs.pr_number }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' && contains(fromJSON('["labeled", "unlabeled"]'), github.event.action) && github.event.label.name == 'review:autofix' }}
+
+jobs:
+    # A manual dispatch carries no pull request payload, so the draft gate
+    # reads the live pull request before the lane may run. The input reaches
+    # the shell as data and must be a bare number; only this job reads
+    # pull requests.
+    gate:
+        if: github.event_name == 'workflow_dispatch'
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        permissions:
+            contents: read
+            pull-requests: read
+        steps:
+            - env:
+                  GH_TOKEN: ${{ github.token }}
+                  PR_NUMBER: ${{ inputs.pr_number }}
+              run: |
+                  printf '%s' "$PR_NUMBER" | grep -Eq '^[0-9]+$' \
+                      || { echo "pull request number must be numeric"; exit 1; }
+                  draft=$(gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER" --jq .draft)
+                  [ "$draft" = "false" ] || { echo "draft pull requests take no autofix round"; exit 1; }
+
+    # A queued ready event keeps its label payload after another round
+    # consumed the review label, so readiness re-reads the live labels before
+    # the lane may start.
+    release:
+        if: github.event_name == 'pull_request' && github.event.action == 'ready_for_review' && github.event.pull_request.draft == false && contains(github.event.pull_request.labels.*.name, 'review:autofix')
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        permissions:
+            contents: read
+            pull-requests: read
+            issues: read
+        outputs:
+            summoned: ${{ steps.live.outputs.summoned }}
+        steps:
+            - id: live
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  # Pages merge through jq -s so a label set past one page
+                  # still counts fully. pipefail plus the explicit failure
+                  # exit keep an API error from reading as a consumed review label.
+                  set -o pipefail
+                  labels=$(gh api --paginate "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels?per_page=100" \
+                      --jq '[.[].name]' | jq -s -r 'add // [] | .[]') \
+                      || { echo "could not read the live labels; rerun the check"; exit 1; }
+                  if printf '%s\n' "$labels" | grep -qx 'review:autofix'; then
+                      echo "summoned=true" >> "$GITHUB_OUTPUT"
+                  else
+                      echo "summoned=false" >> "$GITHUB_OUTPUT"
+                      echo "the review label was already consumed; the lane stands down."
+                  fi
+
+    suggest:
+        needs: [gate, release]
+        if: '!cancelled() && ((github.event_name == ''workflow_dispatch'' && needs.gate.result == ''success'') || (github.event_name == ''pull_request'' && github.event.pull_request.draft == false && ((github.event.action == ''labeled'' && github.event.label.name == ''review:autofix'') || (github.event.action == ''ready_for_review'' && needs.release.outputs.summoned == ''true''))))'
+        uses: runedeck/seer/.github/workflows/autofix-suggest.yaml@main
+        with:
+            pr_number: ${{ inputs.pr_number || '' }}

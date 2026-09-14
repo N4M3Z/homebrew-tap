@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(jj workspace root 2>/dev/null || git rev-parse --show-toplevel 2>/dev/null || dirname "$0")"
+
+zero=0000000000000000000000000000000000000000
+
+synthesize_ref_updates() {
+    git for-each-ref refs/heads --format='%(refname) %(objectname)' \
+        | while read -r reference local_sha; do
+            remote_sha=$(git rev-parse -q --verify \
+                "refs/remotes/origin/${reference#refs/heads/}" 2>/dev/null || printf '%s' "$zero")
+            [ "$remote_sha" = "$local_sha" ] && continue
+            printf '%s %s %s %s\n' "$reference" "$local_sha" "$reference" "$remote_sha"
+        done
+}
+
+synthesize_revision_update() {
+    local revision=$1
+    local local_sha
+
+    jj log --no-graph -r "$revision" -T 'commit_id ++ "\n"' \
+        | while read -r local_sha; do
+            [ -z "$local_sha" ] && continue
+            printf '%s %s %s %s\n' refs/heads/jj-push-check "$local_sha" refs/heads/jj-push-check "$zero"
+        done
+}
+
+synthesize_named_update() {
+    local mapping=$1
+
+    case "$mapping" in
+        *=*) synthesize_revision_update "${mapping#*=}" ;;
+        *)
+            echo "jj push: --named requires NAME=REVISION" >&2
+            return 1
+            ;;
+    esac
+}
+
+synthesize_argument_updates() {
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            -c|--change|-r|--revision)
+                [ "$#" -ge 2 ] || {
+                    echo "jj push: $1 requires a revision" >&2
+                    return 1
+                }
+                synthesize_revision_update "$2"
+                shift 2
+                ;;
+            --change=*|--revision=*)
+                synthesize_revision_update "${1#*=}"
+                shift
+                ;;
+            --named)
+                [ "$#" -ge 2 ] || {
+                    echo "jj push: --named requires NAME=REVISION" >&2
+                    return 1
+                }
+                synthesize_named_update "$2"
+                shift 2
+                ;;
+            --named=*)
+                synthesize_named_update "${1#*=}"
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+}
+
+jj status >/dev/null
+{
+    synthesize_ref_updates
+    synthesize_argument_updates "$@"
+} | sort -u | bash "$(git rev-parse --show-toplevel)/.githooks/pre-push" \
+    origin "$(git remote get-url origin 2>/dev/null || printf 'origin')"
+
+exec jj git push "$@"
