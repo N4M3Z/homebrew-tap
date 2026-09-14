@@ -37,7 +37,7 @@ jobs:
           app-id: ${{ secrets.RUNEWRIGHT_APP_ID }}
           private-key: ${{ secrets.RUNEWRIGHT_APP_KEY }}
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           token: ${{ steps.app.outputs.token }}
 
@@ -71,4 +71,11 @@ jobs:
           git push origin "$branch"
           gh pr create --base main --head "$branch" \
             --title "chore: $FORMULA $VERSION" \
-            --body "Upstream release $VERSION. Checksums copied from the release's checksums.txt by bin/bump-release."
+            --body "$(printf '## Summary\n- Upstream release %s. Checksums copied from the release checksums.txt by bin/bump-release.\n\n## Release Notes\n- %s %s\n' "$VERSION" "$FORMULA" "$VERSION")"
+          # Upstream ships several releases a day; an older open bump for the
+          # same formula is superseded, so close it rather than leave a stack.
+          gh pr list --state open --json number,headRefName \
+            --jq ".[] | select(.headRefName | startswith(\"bump/$FORMULA-\")) | select(.headRefName != \"$branch\") | .number" \
+            | while read -r old; do
+                gh pr close "$old" -c "Superseded by the $VERSION bump."
+              done
