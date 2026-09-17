@@ -7,7 +7,7 @@
 class Cliproxyapi < Formula
   desc "Wrap Gemini CLI, Codex, Claude Code, Qwen Code as an API service"
   homepage "https://github.com/router-for-me/CLIProxyAPI"
-  version "7.3.2"
+  version "7.3.7"
   license "MIT"
 
   livecheck do
@@ -19,12 +19,12 @@ class Cliproxyapi < Formula
   # own installer with systemd, so this formula stays macOS-only. A formula
   # still needs a url on every platform or brew rejects it as malformed, so the
   # Apple silicon archive is the default and depends_on blocks a Linux install.
-  url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v7.3.2/CLIProxyAPI_7.3.2_darwin_aarch64.tar.gz"
-  sha256 "34376bc5823281668859a7b3e3688bb90eeb267d8f197a247605947a478af4ec"
+  url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v7.3.7/CLIProxyAPI_7.3.7_darwin_aarch64.tar.gz"
+  sha256 "15269902173e99b834b8577a520ddf8f89fbb4a224afd2230384c1890b06875f"
 
   on_intel do
-    url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v7.3.2/CLIProxyAPI_7.3.2_darwin_amd64.tar.gz"
-    sha256 "975ce91feb82da9ef6a3b4403abe7f0d865fbbabb9ba4e46da5c0e280a8ece1d"
+    url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v7.3.7/CLIProxyAPI_7.3.7_darwin_amd64.tar.gz"
+    sha256 "7b20a8988afe1dff0a5f3cd3d7fd30300576d630506d747e74ce25dfc46bb2af"
   end
 
   depends_on :macos
