@@ -1,0 +1,24 @@
+# useDefault is required: a gitleaks config without it REPLACES the built-in
+# ruleset, silently disabling every secret rule. This keeps the defaults and
+# layers the allowlist on top.
+[extend]
+useDefault = true
+
+# The SpecStory allowlist covers only the untracked output directories; the
+# tracked project binding and configuration stay inside the scan. Patterns
+# anchor at the path start: an unanchored regex would exempt any file whose
+# path merely contains the substring.
+[allowlist]
+paths = [
+    "^\\.entire/.*",
+    "^\\.specstory/history/.*",
+    "^\\.specstory/debug/.*",
+    "^\\.jj/.*",
+]
+# An OpenPGP fingerprint is public: KEYS pins one per signer, the trusted-key
+# resolver prints it, and recorded proofs show it. gitleaks matches these
+# regexes against the captured secret, so the pattern is the bare
+# fingerprint: exactly forty hexadecimal characters, nothing else.
+regexes = [
+    "^[0-9A-Fa-f]{40}$",
+]

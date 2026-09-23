@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+all_files=false
+scan_only=false
+for argument in ${1+"$@"}; do
+    [ "$argument" = "--all-files" ] && all_files=true
+    [ "$argument" = "--scan-only" ] && scan_only=true
+done
+
+scan_snapshot() {
+    local snapshot_directory=$1
+    local config_path="$PWD/.gitleaks.toml"
+
+    if [ -f "$config_path" ]; then
+        (cd "$snapshot_directory" && gitleaks dir --config "$config_path" --no-banner .)
+    else
+        (cd "$snapshot_directory" && gitleaks dir --no-banner .)
+    fi
+}
+
+list_tracked_files() {
+    if [ -d .jj ] && command -v jj >/dev/null 2>&1; then
+        jj file list -r @ -T 'path ++ "\0"'
+    else
+        git ls-files -z
+    fi
+}
+
+scan_tracked_files() {
+    local candidate_files
+    local copy_failed=false
+    local destination_file
+    local scan_directory
+    local scan_failed=false
+
+    if ! command -v gitleaks >/dev/null 2>&1; then
+        echo "  error: gitleaks is required for the tracked-file scan" >&2
+        echo "         run: make install" >&2
+        return 1
+    fi
+
+    candidate_files=$(mktemp)
+    scan_directory=$(mktemp -d)
+
+    list_tracked_files > "$candidate_files" || {
+        echo "  ⚠  tracked files could not be listed for secret scanning" >&2
+        rm -f "$candidate_files"
+        rm -rf "$scan_directory"
+        return 1
+    }
+
+    if [ ! -s "$candidate_files" ] && [ ! -d .jj ]; then
+        git ls-files -z --cached --others --exclude-standard > "$candidate_files" || {
+            echo "  ⚠  scaffold files could not be listed for secret scanning" >&2
+            rm -f "$candidate_files"
+            rm -rf "$scan_directory"
+            return 1
+        }
+    fi
+
+    while IFS= read -r -d '' candidate_file; do
+        [ -f "$candidate_file" ] || continue
+        destination_file="$scan_directory/$candidate_file"
+        mkdir -p "$(dirname "$destination_file")" || {
+            copy_failed=true
+            break
+        }
+        command cp "./$candidate_file" "$destination_file" || {
+            copy_failed=true
+            break
+        }
+    done < "$candidate_files"
+
+    if [ "$copy_failed" = "true" ]; then
+        echo "  ⚠  tracked files could not be copied for secret scanning" >&2
+        rm -f "$candidate_files"
+        rm -rf "$scan_directory"
+        return 1
+    fi
+
+    scan_snapshot "$scan_directory" || scan_failed=true
+    rm -f "$candidate_files"
+    rm -rf "$scan_directory"
+
+    [ "$scan_failed" = "false" ]
+}
+
+if [ "$scan_only" = "true" ]; then
+    scan_tracked_files
+elif command -v prek >/dev/null 2>&1 && [ -f .pre-commit-config.yaml ]; then
+    hook_failed=false
+    prek run ${1+"$@"} || hook_failed=true
+    [ "$all_files" = "false" ] || scan_tracked_files || hook_failed=true
+    [ "$hook_failed" = "false" ]
+elif [ "$all_files" = "true" ]; then
+    scan_tracked_files
+elif command -v gitleaks >/dev/null 2>&1; then
+    gitleaks git --staged --pre-commit --no-banner
+else
+    echo "  error: neither prek nor gitleaks is available; commit checks cannot run" >&2
+    echo "         run: make install" >&2
+    exit 1
+fi

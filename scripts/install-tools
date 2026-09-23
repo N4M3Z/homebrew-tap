@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Install the tools the commit and push hooks call. Every one of them is a
+# Homebrew formula, and GitHub's ubuntu runners carry Homebrew too, so one
+# path serves the Macs and CI. Idempotent: an installed formula is skipped.
+set -euo pipefail
+
+command -v brew >/dev/null 2>&1 || {
+    echo "install-tools: Homebrew is required (https://brew.sh)" >&2
+    exit 1
+}
+
+# formula      binary
+tools="
+prek         prek
+gitleaks     gitleaks
+shellcheck   shellcheck
+typos-cli    typos
+actionlint   actionlint
+zizmor       zizmor
+semgrep      semgrep
+"
+
+missing=()
+while read -r formula binary; do
+    [ -n "$formula" ] || continue
+    command -v "$binary" >/dev/null 2>&1 || missing+=("$formula")
+done <<< "$tools"
+
+if [ "${#missing[@]}" -eq 0 ]; then
+    echo "install-tools: every hook tool is present"
+    exit 0
+fi
+
+echo "install-tools: installing ${missing[*]}"
+brew install "${missing[@]}"

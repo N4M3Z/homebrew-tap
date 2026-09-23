@@ -1,0 +1,131 @@
+name: PR Lint
+
+on:
+    pull_request_target:
+        types: [opened, edited, synchronize, reopened]
+
+# issues: write lets the labeler create area labels that do not exist
+# yet — a freshly scaffolded repository's first pull request provisions
+# its own label set.
+permissions:
+    contents: read
+    pull-requests: write
+    issues: write
+
+# Overlapping synchronize runs race the label writes: the older run
+# finishing last would restore stale labels.
+concurrency:
+    group: pr-lint-${{ github.event.pull_request.number }}
+    cancel-in-progress: true
+
+jobs:
+    title:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  types: |
+                      feat
+                      fix
+                      docs
+                      chore
+                      refactor
+                      test
+                  requireScope: false
+                  subjectPattern: ^(?![A-Z]).+$
+                  subjectPatternError: >
+                      The subject "{subject}" must start lowercase.
+
+    label:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/labeler@b8dd2d9be0f68b860e7dae5dae7d772984eacd6d # v6
+              with:
+                  sync-labels: true
+
+    # Every pull request synchronizes the ceremony's fixed label set, so review
+    # requests and waivers keep their configured names, colors, and descriptions.
+    labels:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+              with:
+                  script: |
+                      const wanted = [
+                          ["review", "5319e7", "Summons the full ordered review sequence"],
+                          ["review:runeseer", "5319e7", "Summons the adjudicating correctness lane"],
+                          ["review:macroscope", "5319e7", "Summons the macroscope lane"],
+                          ["review:cursor", "5319e7", "Summons a standalone Cursor round"],
+                          ["review:coderabbit", "5319e7", "Summons a standalone CodeRabbit round"],
+                          ["review:pr-agent", "5319e7", "Summons a standalone PR-Agent round"],
+                          ["review:autofix", "5319e7", "Summons a mechanical-fix suggestion patch"],
+                          ["skip:cursor", "b60205", "Owner override: the cursor lane never runs"],
+                          ["skip:macroscope", "b60205", "Owner override: the macroscope lane never runs"],
+                          ["skip:runeseer", "b60205", "Owner override: the runeseer lane never runs"],
+                          ["skip:pr-agent", "b60205", "Owner override: the pr-agent lane never runs"],
+                          ["ignore:cursor", "d93f0b", "Owner override: the cursor lane reports but does not hold the merge"],
+                          ["ignore:macroscope", "d93f0b", "Owner override: the macroscope lane reports but does not hold the merge"],
+                          ["ignore:runeseer", "d93f0b", "Owner override: the runeseer lane reports but does not hold the merge"],
+                          ["ignore:spec", "d93f0b", "Allowed defect: protected paths change without a specification, reason in body"],
+                          // The seer cascade and correctness bodies apply and
+                          // read the stage records and provider blockers;
+                          // provisioning pins their names, colors, and
+                          // descriptions.
+                          ["stage:cursor", "ededed", "Round record: the cursor stage settled on this head"],
+                          ["stage:macroscope", "ededed", "Round record: the macroscope stage settled on this head"],
+                          ["issue:cursor", "e99695", "Provider blocker: clear the cursor problem before re-summoning"],
+                          ["issue:macroscope", "e99695", "Provider blocker: clear the macroscope problem before re-summoning"],
+                          ["issue:rune", "e99695", "Provider blocker: clear the rune problem before re-summoning"],
+                      ];
+                      for (const [name, color, description] of wanted) {
+                          try {
+                              await github.rest.issues.updateLabel({
+                                  ...context.repo, name, new_name: name, color, description,
+                              });
+                          } catch (error) {
+                              if (error.status !== 404) throw error;
+                              await github.rest.issues.createLabel({ ...context.repo, name, color, description });
+                          }
+                      }
+                      // Names the current taxonomy replaced. Leaving one behind
+                      // would offer an override that no workflow reads.
+                      const retired = ["review:skip", "spec:none"];
+                      for (const name of retired) {
+                          try {
+                              await github.rest.issues.deleteLabel({ ...context.repo, name });
+                          } catch (error) {
+                              if (error.status !== 404) throw error;
+                          }
+                      }
+
+    size:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+              with:
+                  script: |
+                      const pr = context.payload.pull_request;
+                      const changed = pr.additions + pr.deletions;
+                      const size = changed < 50 ? "size:small" : changed < 300 ? "size:med" : changed < 1000 ? "size:large" : "size:xlarge";
+                      // The new bucket goes on before the old ones come off, so
+                      // a run cancelled between the two leaves the pull request
+                      // over-labelled rather than carrying no size at all.
+                      try {
+                          await github.rest.issues.getLabel({ ...context.repo, name: size });
+                      } catch {
+                          await github.rest.issues.createLabel({
+                              ...context.repo, name: size, color: "ededed",
+                              description: "Changed-lines bucket, applied automatically" });
+                      }
+                      await github.rest.issues.addLabels({
+                          ...context.repo, issue_number: pr.number, labels: [size] });
+                      const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+                          ...context.repo, issue_number: pr.number });
+                      for (const label of labels) {
+                          if (label.name.startsWith("size:") && label.name !== size) {
+                              await github.rest.issues.removeLabel({
+                                  ...context.repo, issue_number: pr.number, name: label.name });
+                          }
+                      }

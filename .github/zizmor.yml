@@ -1,0 +1,66 @@
+# zizmor baseline registry. Each entry is declared debt from the first audit
+# of this workflow fleet, recorded so the check can block new findings.
+# Remove an entry when its workflow is repaired; never add one without a
+# reason beside it.
+rules:
+    dangerous-triggers:
+        # pull_request_target is the deliberate seer design: the review
+        # lanes need base-repository secrets on fork pull requests.
+        ignore:
+            - attestations.yaml
+            - autofix-comment.yaml
+            - pr-lint.yaml
+            - review-cascade.yaml
+            - review-correctness.yaml
+            - review-cursor.yaml
+            - review-pragent.yaml
+            # The seal check reads KEYS and the verifier from the default
+            # branch and fetches the head as objects only.
+            - owner-seal.yaml
+            # workflow_run is the only trigger that sees a merge on main; the
+            # job checks out the completed run's head, never a PR head.
+            - spec-drift.yaml
+    unpinned-uses:
+        # runedeck/* first-party references are exempt from SHA pinning by
+        # the action-pinning check in quality.yaml; zizmor cannot express
+        # that policy, so the files carry ignores.
+        ignore:
+            - autofix-comment.yaml
+            - autofix-suggest.yaml
+            - congrats.yaml
+            - issue-dedup.yaml
+            - review-cascade.yaml
+            - review-correctness.yaml
+            - review-cursor.yaml
+            - review-pragent.yaml
+    excessive-permissions:
+        # Permission tightening is separate triage work.
+        ignore:
+            - pr-lint.yaml
+            - review-cascade.yaml
+            - review-correctness.yaml
+    github-app:
+        # App-token mints are the acceptance design; scoping them by
+        # permission input is separate triage work.
+        ignore:
+            - review-correctness.yaml
+            - spec-drift.yaml
+            - dispatch-template-release.yaml
+            - consumer-parity.yaml
+            - template-update.yaml
+    artipacked:
+        # persist-credentials hardening is separate triage work.
+        ignore:
+            - attestations.yaml
+            - secret-scan.yaml
+    self-repository:
+        # The `$/` form guards against a runtime-cloned action directory. A
+        # local reusable workflow is resolved by the service at the caller's
+        # commit either way, and the Action pinning step in quality.yaml
+        # and the pinned actionlint know the `./` form.
+        ignore:
+            - draft-open.yaml
+    template-injection:
+        # The expansion sites are separate triage work.
+        ignore:
+            - review-correctness.yaml

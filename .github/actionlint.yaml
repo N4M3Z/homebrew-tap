@@ -1,0 +1,10 @@
+# actionlint configuration for the ceremony callers. SC2016 fires on the
+# GraphQL query text in the correctness mirror, where `$owner` and `$repo`
+# are GraphQL variables inside single quotes on purpose, and on jq programs
+# that carry `$name` bindings the same way. `workflow_sha` is a real field
+# of `github.job` that actionlint's schema does not know yet.
+paths:
+    '**/.github/workflows/**/*.yaml':
+        ignore:
+            - 'SC2016'
+            - 'property "workflow_sha" is not defined in object type'

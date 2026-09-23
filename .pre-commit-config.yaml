@@ -1,0 +1,83 @@
+# Commit and push checks for a Homebrew tap: formulas, casks, one bump
+# script, and a few workflows. Nothing here needs a language toolchain.
+repos:
+    - repo: builtin
+      hooks:
+          - id: trailing-whitespace
+          - id: check-yaml
+          - id: check-json
+
+    - repo: local
+      hooks:
+          # A labeled begin or end marker is never legitimate text, so each
+          # blocks alone and a partially resolved conflict still fails; only
+          # a bare ======= is setext-ambiguous and passes.
+          - id: check-conflict-markers
+            name: conflict markers
+            entry: sh -c 'status=0; for file in "$@"; do if grep -n -E "^(<<<<<<< |>>>>>>> )" "$file"; then status=1; fi; done; exit "$status"' --
+            language: system
+            types: [text]
+
+          - id: check-reject-files
+            name: reject files
+            entry: sh -c 'rejects=$(git ls-files --cached --others --exclude-standard -- "*.rej"); [ -z "$rejects" ] || { printf "%s\n" "$rejects"; exit 1; }'
+            language: system
+            pass_filenames: false
+
+          - id: shellcheck
+            name: shellcheck
+            entry: shellcheck -S warning
+            language: system
+            types: [shell]
+
+          - id: gitleaks
+            name: gitleaks (staged)
+            entry: gitleaks git --staged --pre-commit --no-banner
+            language: system
+            pass_filenames: false
+            stages: [pre-commit]
+
+          # Each linter skips when its binary is absent so a fresh clone stays
+          # usable before make install runs; REQUIRE_GATES=1 (set in CI) turns
+          # absence into a failure.
+          - id: typos
+            name: typos spelling
+            entry: sh -c 'if command -v typos >/dev/null 2>&1; then typos --force-exclude "$@"; elif [ -n "${REQUIRE_GATES:-}" ]; then echo "REQUIRE_GATES set and typos is absent"; exit 1; fi' --
+            language: system
+            types: [text]
+
+          - id: actionlint
+            name: actionlint
+            entry: sh -c 'if command -v actionlint >/dev/null 2>&1; then actionlint "$@"; elif [ -n "${REQUIRE_GATES:-}" ]; then echo "REQUIRE_GATES set and actionlint is absent"; exit 1; fi' --
+            language: system
+            files: ^\.github/workflows/.*\.ya?ml$
+
+          - id: zizmor
+            name: zizmor workflow audit
+            entry: sh -c 'if command -v zizmor >/dev/null 2>&1; then if [ -f .github/zizmor.yml ]; then zizmor --config .github/zizmor.yml "$@"; else zizmor "$@"; fi; elif [ -n "${REQUIRE_GATES:-}" ]; then echo "REQUIRE_GATES set and zizmor is absent"; exit 1; fi' --
+            language: system
+            files: ^\.github/workflows/.*\.ya?ml$
+
+          - id: semgrep
+            name: semgrep OWASP
+            entry: semgrep scan --config=p/owasp-top-ten --metrics=off --disable-version-check --quiet .
+            language: system
+            pass_filenames: false
+            stages: [pre-push]
+
+          - id: gitleaks-range
+            name: gitleaks (push range)
+            entry: sh -c 'if [ -n "${PRE_COMMIT_FROM_REF:-}" ]; then gitleaks git --no-banner --log-opts "${PRE_COMMIT_FROM_REF}..${PRE_COMMIT_TO_REF:-HEAD}"; elif [ -n "${GITLEAKS_PUSH_TO_REF:-}" ]; then gitleaks git --no-banner --log-opts "$GITLEAKS_PUSH_TO_REF"; else bash .githooks/pre-commit --scan-only; fi'
+            language: system
+            pass_filenames: false
+            stages: [pre-push]
+
+          # The same rules as the ci/authorship workflow, applied before the
+          # push so a bad identity fails as a local amend, not a CI rewrite.
+          - id: check-authorship
+            name: authorship (push range)
+            entry: bash scripts/check-authorship
+            language: system
+            pass_filenames: false
+            always_run: true
+            stages: [pre-push]

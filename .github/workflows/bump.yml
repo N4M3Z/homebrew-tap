@@ -1,0 +1,85 @@
+# Keeps the binary-release formulas on the latest upstream release.
+#
+# Every six hours (and on demand) each listed formula is bumped with
+# bin/bump-release, which rewrites the url and sha256 lines from the
+# release's checksums.txt. A change lands as a pull request on its own
+# branch so brew test-bot runs on it; nothing is pushed to main here.
+#
+# The pull request is opened with a Runewright App token instead of
+# GITHUB_TOKEN because pull requests created by GITHUB_TOKEN never trigger
+# other workflows, which would leave the test-bot run unstarted.
+name: bump releases
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        formula: [cliproxyapi, cpa-manager-plus]
+    steps:
+      # The App token opens the pull request, because a pull request that
+      # GITHUB_TOKEN opens starts no other workflow, and test-bot must run.
+      # It is limited to this repository and to the two scopes a bump needs.
+      - name: Mint Runewright token
+        id: app
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ secrets.RUNEWRIGHT_APP_ID }}
+          private-key: ${{ secrets.RUNEWRIGHT_APP_KEY }}
+          repositories: homebrew-tap
+          permission-contents: write
+          permission-pull-requests: write
+
+      # No credential stays in the local git config. The push step below
+      # names the App token in its own command.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Bump formula
+        id: bump
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          out=$(bin/bump-release "Formula/${{ matrix.formula }}.rb")
+          echo "$out"
+          version=${out##* }
+          [ -n "$out" ] && echo "version=$version" >> "$GITHUB_OUTPUT" || true
+
+      - name: Open pull request
+        if: steps.bump.outputs.version != ''
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          FORMULA: ${{ matrix.formula }}
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          branch="bump/$FORMULA-$VERSION"
+          if gh pr list --head "$branch" --state all --json number --jq length | grep -qv '^0$'; then
+            echo "pull request for $branch already exists"
+            exit 0
+          fi
+          git config user.name "runewright[bot]"
+          git config user.email "runewright[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add "Formula/$FORMULA.rb"
+          git commit -m "chore: $FORMULA $VERSION" -- "Formula/$FORMULA.rb"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "chore: $FORMULA $VERSION" \
+            --body "$(printf '## Summary\n- Upstream release %s. Checksums copied from the release checksums.txt by bin/bump-release.\n\n## Release Notes\n- %s %s\n' "$VERSION" "$FORMULA" "$VERSION")"
+          # Upstream ships several releases a day; an older open bump for the
+          # same formula is superseded, so close it rather than leave a stack.
+          gh pr list --state open --json number,headRefName \
+            --jq ".[] | select(.headRefName | startswith(\"bump/$FORMULA-\")) | select(.headRefName != \"$branch\") | .number" \
+            | while read -r old; do
+                gh pr close "$old" --delete-branch -c "Superseded by the $VERSION bump."
+              done

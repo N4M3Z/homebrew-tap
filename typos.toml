@@ -1,0 +1,16 @@
+# typos configuration. KEYS holds base64 key material. Sidecars and
+# third-party notices are not this repository's prose.
+[files]
+extend-exclude = [
+    "*.asc",
+    ".provenance",
+    ".claude",
+    ".codex",
+    ".gemini",
+    ".opencode",
+    "**/THIRD_PARTY_NOTICES.md",
+]
+
+[default]
+# Mermaid node identifiers such as BA in fenced diagrams.
+extend-ignore-re = ["[A-Z]{2} ?-->", "--> ?[A-Z]{2}", "[A-Z]{2}\\[", "\\bfpr\\b"]

@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Bump a binary-release formula to the latest GitHub release.
+#
+# Works for formulas that pin per-platform release archives whose upstream
+# publishes a checksums.txt asset (cliproxyapi, cpa-manager-plus). Every
+# `url` line has the old version replaced by the new one, and the `sha256`
+# line that follows it is replaced by the checksum recorded for that file
+# name in checksums.txt. A `version "..."` line, when present, is updated.
+#
+# Usage: bin/bump-release Formula/<name>.rb
+# Exit 0 and print nothing when the formula is already current.
+# Needs: curl, jq, awk. GITHUB_TOKEN is optional (raises the API rate limit).
+set -euo pipefail
+
+formula="${1:?usage: bump-release Formula/<name>.rb}"
+[ -f "$formula" ] || { echo "no such formula: $formula" >&2; exit 2; }
+
+homepage=$(awk -F'"' '/^  homepage "/ { print $2; exit }' "$formula")
+repo=${homepage#https://github.com/}
+[ "$repo" != "$homepage" ] || { echo "homepage is not a GitHub URL: $homepage" >&2; exit 2; }
+
+current=$(awk -F'"' '/^  version "/ { print $2; exit }' "$formula")
+if [ -z "$current" ]; then
+    current=$(awk -F'"' '/^ *url "/ { print $2; exit }' "$formula" \
+        | sed -E 's#.*/releases/download/v?([^/]+)/.*#\1#')
+fi
+[ -n "$current" ] || { echo "cannot read the current version from $formula" >&2; exit 2; }
+
+auth=()
+[ -z "${GITHUB_TOKEN:-}" ] || auth=(-H "Authorization: Bearer $GITHUB_TOKEN")
+tag=$(curl -fsSL "${auth[@]}" -H 'Accept: application/vnd.github+json' \
+    "https://api.github.com/repos/$repo/releases/latest" | jq -r .tag_name)
+[ -n "$tag" ] && [ "$tag" != null ] || { echo "cannot read the latest release of $repo" >&2; exit 2; }
+latest=${tag#v}
+[ "$latest" != "$current" ] || exit 0
+
+checksums=$(mktemp)
+trap 'rm -f "$checksums"' EXIT
+curl -fsSL "https://github.com/$repo/releases/download/$tag/checksums.txt" -o "$checksums"
+
+updated=$(awk -v old="$current" -v new="$latest" -v sums="$checksums" '
+    BEGIN {
+        while ((getline line < sums) > 0) {
+            n = split(line, parts, /[ \t]+/)
+            if (n < 2) continue
+            file = parts[2]; sub(/^\.\//, "", file); sub(/^\*/, "", file)
+            sha[file] = parts[1]
+        }
+    }
+    /^  version "/ { sub(old, new); print; next }
+    /^ *url "/ {
+        gsub(old, new)
+        split($0, q, "\"")
+        n = split(q[2], segs, "/")
+        pending = segs[n]
+        if (!(pending in sha)) { printf "no checksum for %s\n", pending > "/dev/stderr"; exit 3 }
+        print; next
+    }
+    /^ *sha256 "/ && pending != "" {
+        sub(/"[0-9a-f]+"/, "\"" sha[pending] "\"")
+        pending = ""
+        print; next
+    }
+    { print }
+' "$formula")
+
+printf '%s\n' "$updated" > "$formula"
+echo "bumped $(basename "$formula" .rb) $current -> $latest"

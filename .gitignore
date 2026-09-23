@@ -1,0 +1,26 @@
+build/
+dist/
+.DS_Store
+
+# rune-deployed provider trees and review comments
+.claude/
+.codex/
+.gemini/
+.opencode/
+.rune-comments.yaml
+
+# Parallel work, one isolated tree per agent: jj workspaces where the repo is
+# colocated, git worktrees where it is git-only. Both are ignored before any
+# tree exists, because a tree created under a tracked path stays tracked, and
+# git follows the nested .jj store that the outer jj skips.
+.workspaces/
+.worktrees/
+
+# Entire session data (runtime, not source). The hooks Entire installs into
+# .githooks/ are tracked source; only its runtime data here is ignored.
+.entire/
+
+# SpecStory writes transcripts to the working layer, not the repository; its
+# tracked files are the project binding and configuration only.
+.specstory/history/
+.specstory/debug/

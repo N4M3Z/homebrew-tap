@@ -1,0 +1,7 @@
+# Trusted signers for this repository, read by `rune sign --verify`.
+# One line per signer: the pinned fingerprint, then the addresses whose Web
+# Key Directory (or GitHub key list) supplies the bytes, tried in order.
+# Nothing is trusted but the pin.
+#
+# The YubiKey signing subkey of Martin Zeman (primary 786F851F8AE345F5A98B822EC92F47D08BCD9F72).
+signer 29DD2145CE7A818929459B2649F08103D3DA399E git@martinzeman.net N4M3Z@users.noreply.github.com
