@@ -17,12 +17,12 @@ class CpaManagerPlus < Formula
   # A formula still needs a url on every platform or brew rejects it as
   # malformed, so the Apple silicon archive is the default and depends_on
   # blocks a Linux install.
-  url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.13.2/cpa-manager-plus_v1.13.2_darwin_arm64.tar.gz"
-  sha256 "1d092774304df40cc1c03cab4900579fdd27cd543c6c0a74bb989fbcb1ea094d"
+  url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.14.1/cpa-manager-plus_v1.14.1_darwin_arm64.tar.gz"
+  sha256 "a775ad6b6d9e09f4ba4bb99ddbbb553d6d986aab54385ed7f7632c7d0fa3fcc2"
 
   on_intel do
-    url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.13.2/cpa-manager-plus_v1.13.2_darwin_amd64.tar.gz"
-    sha256 "97b1a972de4327a9db26dae4c9bb9cd9bf64f123b07b4b687ee5188f96c3e50f"
+    url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.14.1/cpa-manager-plus_v1.14.1_darwin_amd64.tar.gz"
+    sha256 "205184943218389ccb5286fccc461c950d1d1f5fc9255cc4004da9f7b9c3d4ef"
   end
 
   depends_on :macos
