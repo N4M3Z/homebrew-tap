@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Install the tools the commit and push hooks call. Every one of them is a
-# Homebrew formula, and GitHub's ubuntu runners carry Homebrew too, so one
-# path serves the Macs and CI. Idempotent: an installed formula is skipped.
+# Homebrew formula. CI adds the preinstalled Homebrew to PATH first.
+# An installed tool is skipped.
 set -euo pipefail
 
 command -v brew >/dev/null 2>&1 || {
