@@ -18,12 +18,12 @@ class Cliproxyapi < Formula
   # own installer with systemd, so this formula stays macOS-only. A formula
   # still needs a url on every platform or brew rejects it as malformed, so the
   # Apple silicon archive is the default and depends_on blocks a Linux install.
-  url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.4/CLIProxyAPI_8.0.4_darwin_aarch64.tar.gz"
-  sha256 "2f06c4e0786cb61f15484eaf22efa7b6324ec20679b9113cfa9b95ccf75a73f1"
+  url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.10/CLIProxyAPI_8.0.10_darwin_aarch64.tar.gz"
+  sha256 "e2080f54ee4d7940c77345440956ce592eef34da2910bd865d4928b75accd122"
 
   on_intel do
-    url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.4/CLIProxyAPI_8.0.4_darwin_amd64.tar.gz"
-    sha256 "ab60f62cfd55098ed42ae12733151d177e598637746b880918c05040d9ddfc8b"
+    url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.10/CLIProxyAPI_8.0.10_darwin_amd64.tar.gz"
+    sha256 "2d5af1cf19cc0d887b96fde809f78a999438a65564ce19de5966b7d5b6c451ca"
   end
 
   depends_on :macos
