@@ -9,11 +9,11 @@ class CpaManagerPlus < Formula
   # Select a macOS archive on every host so Linux can parse the formula.
   # The macOS dependency below prevents installation on Linux.
   if Hardware::CPU.intel?
-    url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.14.1/cpa-manager-plus_v1.14.1_darwin_amd64.tar.gz"
-    sha256 "205184943218389ccb5286fccc461c950d1d1f5fc9255cc4004da9f7b9c3d4ef"
+    url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.14.4/cpa-manager-plus_v1.14.4_darwin_amd64.tar.gz"
+    sha256 "ea55a5e85ceeaf63f430d965727bff5de7c85c4305f6e4d3d1eb9c87af6410d1"
   else
-    url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.14.1/cpa-manager-plus_v1.14.1_darwin_arm64.tar.gz"
-    sha256 "a775ad6b6d9e09f4ba4bb99ddbbb553d6d986aab54385ed7f7632c7d0fa3fcc2"
+    url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.14.4/cpa-manager-plus_v1.14.4_darwin_arm64.tar.gz"
+    sha256 "1ae54030965ea850195d6e0c62a1f2a2e319b220524fbccb60de36cb046f5a14"
   end
   license "MIT"
 
