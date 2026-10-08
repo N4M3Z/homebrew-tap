@@ -12,23 +12,20 @@
 class Multica < Formula
   desc "CLI and local agent runtime daemon for the Multica platform"
   homepage "https://github.com/multica-ai/multica"
+  # Select a macOS archive on every host so Linux can parse the formula.
+  # The macOS dependency below prevents installation on Linux.
+  if Hardware::CPU.intel?
+    url "https://github.com/multica-ai/multica/releases/download/v0.4.44/multica-cli-0.4.44-darwin-amd64.tar.gz"
+    sha256 "8589a16c27c4857c7de3308d456fa73f8f35fc6a0b38354e739e864ee01aff6d"
+  else
+    url "https://github.com/multica-ai/multica/releases/download/v0.4.44/multica-cli-0.4.44-darwin-arm64.tar.gz"
+    sha256 "f300cf8036b1f596466acde35f67d986f1f75a657f77e6e0e9de1134563a76aa"
+  end
   license "Apache-2.0"
 
   livecheck do
     url :stable
     strategy :github_latest
-  end
-
-  # Upstream also publishes Linux archives, but the daemon here runs on this
-  # Mac only. A formula still needs a url on every platform or brew rejects it
-  # as malformed, so the Apple silicon archive is the default and depends_on
-  # blocks a Linux install.
-  url "https://github.com/multica-ai/multica/releases/download/v0.4.44/multica-cli-0.4.44-darwin-arm64.tar.gz"
-  sha256 "f300cf8036b1f596466acde35f67d986f1f75a657f77e6e0e9de1134563a76aa"
-
-  on_intel do
-    url "https://github.com/multica-ai/multica/releases/download/v0.4.44/multica-cli-0.4.44-darwin-amd64.tar.gz"
-    sha256 "8589a16c27c4857c7de3308d456fa73f8f35fc6a0b38354e739e864ee01aff6d"
   end
 
   depends_on :macos

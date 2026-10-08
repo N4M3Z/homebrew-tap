@@ -7,23 +7,20 @@
 class Cliproxyapi < Formula
   desc "Wrap Gemini CLI, Codex, Claude Code, Qwen Code as an API service"
   homepage "https://github.com/router-for-me/CLIProxyAPI"
+  # Select a macOS archive on every host so Linux can parse the formula.
+  # The macOS dependency below prevents installation on Linux.
+  if Hardware::CPU.intel?
+    url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.20/CLIProxyAPI_8.0.20_darwin_amd64.tar.gz"
+    sha256 "0e6e83bc1132e0425ce8db18fe13b3ab7278b8eb2ef50c6164aaafc444a805ab"
+  else
+    url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.20/CLIProxyAPI_8.0.20_darwin_aarch64.tar.gz"
+    sha256 "abb68051528506076561298ae3c4f3797c360f1d37127c2e459afdecce454df0"
+  end
   license "MIT"
 
   livecheck do
     url :stable
     strategy :github_latest
-  end
-
-  # Upstream also publishes Linux archives, but the Linux lane uses upstream's
-  # own installer with systemd, so this formula stays macOS-only. A formula
-  # still needs a url on every platform or brew rejects it as malformed, so the
-  # Apple silicon archive is the default and depends_on blocks a Linux install.
-  url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.20/CLIProxyAPI_8.0.20_darwin_aarch64.tar.gz"
-  sha256 "abb68051528506076561298ae3c4f3797c360f1d37127c2e459afdecce454df0"
-
-  on_intel do
-    url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.20/CLIProxyAPI_8.0.20_darwin_amd64.tar.gz"
-    sha256 "0e6e83bc1132e0425ce8db18fe13b3ab7278b8eb2ef50c6164aaafc444a805ab"
   end
 
   depends_on :macos

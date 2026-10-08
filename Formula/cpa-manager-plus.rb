@@ -6,23 +6,20 @@
 class CpaManagerPlus < Formula
   desc "Self-hosted CPA management panel and AI gateway observability dashboard"
   homepage "https://github.com/seakee/CPA-Manager-Plus"
+  # Select a macOS archive on every host so Linux can parse the formula.
+  # The macOS dependency below prevents installation on Linux.
+  if Hardware::CPU.intel?
+    url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.14.4/cpa-manager-plus_v1.14.4_darwin_amd64.tar.gz"
+    sha256 "ea55a5e85ceeaf63f430d965727bff5de7c85c4305f6e4d3d1eb9c87af6410d1"
+  else
+    url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.14.4/cpa-manager-plus_v1.14.4_darwin_arm64.tar.gz"
+    sha256 "1ae54030965ea850195d6e0c62a1f2a2e319b220524fbccb60de36cb046f5a14"
+  end
   license "MIT"
 
   livecheck do
     url :stable
     strategy :github_latest
-  end
-
-  # Upstream also publishes Linux archives, but only macOS is supported here.
-  # A formula still needs a url on every platform or brew rejects it as
-  # malformed, so the Apple silicon archive is the default and depends_on
-  # blocks a Linux install.
-  url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.14.4/cpa-manager-plus_v1.14.4_darwin_arm64.tar.gz"
-  sha256 "1ae54030965ea850195d6e0c62a1f2a2e319b220524fbccb60de36cb046f5a14"
-
-  on_intel do
-    url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.14.4/cpa-manager-plus_v1.14.4_darwin_amd64.tar.gz"
-    sha256 "ea55a5e85ceeaf63f430d965727bff5de7c85c4305f6e4d3d1eb9c87af6410d1"
   end
 
   depends_on :macos
