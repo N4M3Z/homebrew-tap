@@ -63,10 +63,17 @@ jobs:
           VERSION: ${{ steps.bump.outputs.version }}
         run: |
           branch="bump/$FORMULA-$VERSION"
-          if gh pr list --head "$branch" --state all --json number --jq length | grep -qv '^0$'; then
-            echo "pull request for $branch already exists"
+          # An open or merged pull request for this version is enough. A
+          # closed one is not: a bump closed as superseded, or closed while
+          # CI was broken, must be offered again.
+          if gh pr list --head "$branch" --state open --json number --jq length | grep -qv '^0$' \
+             || gh pr list --head "$branch" --state merged --json number --jq length | grep -qv '^0$'; then
+            echo "pull request for $branch is open or merged"
             exit 0
           fi
+          # A closed pull request leaves its branch behind when it was closed
+          # by hand, and the push below must not fast-forward onto it.
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" --delete "$branch" 2>/dev/null || true
           git config user.name "runewright[bot]"
           git config user.email "runewright[bot]@users.noreply.github.com"
           git switch -c "$branch"
