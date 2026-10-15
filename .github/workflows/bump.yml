@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        formula: [cliproxyapi, cpa-manager-plus]
+        formula: [cliproxyapi, cpa-manager-plus, multica]
     steps:
       # The App token opens the pull request, because a pull request that
       # GITHUB_TOKEN opens starts no other workflow, and test-bot must run.

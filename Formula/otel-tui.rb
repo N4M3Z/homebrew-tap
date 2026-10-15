@@ -49,4 +49,8 @@ class OtelTui < Formula
       Rebuild of upstream ymtdzzz/otel-tui at a stable commit past 0.7.3; no code changes.
     EOS
   end
+
+  test do
+    assert_match version.to_s, shell_output("#{bin}/otel-tui --version")
+  end
 end

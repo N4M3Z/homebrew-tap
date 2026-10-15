@@ -20,15 +20,16 @@ class Multica < Formula
   end
 
   # Upstream also publishes Linux archives, but the daemon here runs on this
-  # Mac only. A formula still needs a url on every platform or brew rejects it
-  # as malformed, so the Apple silicon archive is the default and depends_on
-  # blocks a Linux install.
-  url "https://github.com/multica-ai/multica/releases/download/v0.4.44/multica-cli-0.4.44-darwin-arm64.tar.gz"
-  sha256 "f300cf8036b1f596466acde35f67d986f1f75a657f77e6e0e9de1134563a76aa"
-
-  on_intel do
+  # Mac only. Brew parses the formula on Linux too, so a macOS archive is
+  # selected on every host and the macOS dependency below blocks a Linux
+  # install. A top-level url with an on_intel override fails brew audit,
+  # which reads the override as a second stable url.
+  if Hardware::CPU.intel?
     url "https://github.com/multica-ai/multica/releases/download/v0.4.44/multica-cli-0.4.44-darwin-amd64.tar.gz"
     sha256 "8589a16c27c4857c7de3308d456fa73f8f35fc6a0b38354e739e864ee01aff6d"
+  else
+    url "https://github.com/multica-ai/multica/releases/download/v0.4.44/multica-cli-0.4.44-darwin-arm64.tar.gz"
+    sha256 "f300cf8036b1f596466acde35f67d986f1f75a657f77e6e0e9de1134563a76aa"
   end
 
   depends_on :macos
