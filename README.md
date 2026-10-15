@@ -68,6 +68,19 @@ proton-drive auth login
 
 Not to be confused with the `proton-drive` Homebrew cask, which is the GUI app.
 
+### vale-ls
+
+[vale-ls](https://github.com/vale-cli/vale-ls), the language server for the
+Vale prose linter. Upstream publishes prebuilt binaries only, no Homebrew
+formula. Depends on the `vale` formula from homebrew-core.
+
+```sh
+brew install N4M3Z/tap/vale-ls
+```
+
+Point your editor's LSP client at `vale-ls`. It finds `vale` on PATH, or pass
+`--vale-binary <path>`.
+
 ## Release bumps
 
 `bin/bump-release Formula/<name>.rb` rewrites a binary-release formula to the
