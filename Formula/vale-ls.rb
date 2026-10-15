@@ -1,11 +1,10 @@
 # The Vale language server. Upstream publishes prebuilt archives per target
-# and no checksums file, so the SHA-256 values below were computed from the
-# downloaded archives at the pinned release. There is no Homebrew formula
-# upstream and none in homebrew-core.
+# and no checksums file; the SHA-256 values below match the digest GitHub
+# records for each release asset. There is no Homebrew formula upstream and
+# none in homebrew-core.
 class ValeLs < Formula
   desc "Language Server Protocol implementation for the Vale prose linter"
   homepage "https://github.com/vale-cli/vale-ls"
-  version "0.6.0"
   # Select a macOS archive on every host so Linux can parse the formula.
   # The macOS dependency below prevents installation on Linux.
   if Hardware::CPU.intel?
