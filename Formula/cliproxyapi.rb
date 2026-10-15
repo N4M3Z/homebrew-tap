@@ -15,15 +15,16 @@ class Cliproxyapi < Formula
   end
 
   # Upstream also publishes Linux archives, but the Linux lane uses upstream's
-  # own installer with systemd, so this formula stays macOS-only. A formula
-  # still needs a url on every platform or brew rejects it as malformed, so the
-  # Apple silicon archive is the default and depends_on blocks a Linux install.
-  url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.20/CLIProxyAPI_8.0.20_darwin_aarch64.tar.gz"
-  sha256 "abb68051528506076561298ae3c4f3797c360f1d37127c2e459afdecce454df0"
-
-  on_intel do
+  # own installer with systemd, so this formula stays macOS-only. Brew parses
+  # the formula on Linux too, so a macOS archive is selected on every host and
+  # depends_on :macos blocks a Linux install. A top-level url with an on_intel
+  # override fails brew audit, which reads the override as a second stable url.
+  if Hardware::CPU.intel?
     url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.20/CLIProxyAPI_8.0.20_darwin_amd64.tar.gz"
     sha256 "0e6e83bc1132e0425ce8db18fe13b3ab7278b8eb2ef50c6164aaafc444a805ab"
+  else
+    url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.20/CLIProxyAPI_8.0.20_darwin_aarch64.tar.gz"
+    sha256 "abb68051528506076561298ae3c4f3797c360f1d37127c2e459afdecce454df0"
   end
 
   depends_on :macos

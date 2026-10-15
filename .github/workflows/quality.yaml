@@ -25,6 +25,14 @@ jobs:
                   # must never find a usable token in the git config.
                   persist-credentials: false
 
+            # The ubuntu runner image carries Homebrew but does not add it
+            # to PATH, and scripts/install-tools installs through brew.
+            - name: Add Homebrew to PATH
+              run: |
+                  test -x /home/linuxbrew/.linuxbrew/bin/brew
+                  echo /home/linuxbrew/.linuxbrew/bin >> "$GITHUB_PATH"
+                  echo /home/linuxbrew/.linuxbrew/sbin >> "$GITHUB_PATH"
+
             # Third-party actions must be pinned to a full commit SHA;
             # first-party paths (./) and runedeck/* refs are exempt.
             - name: Action pinning

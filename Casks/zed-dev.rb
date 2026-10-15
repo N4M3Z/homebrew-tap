@@ -18,6 +18,7 @@ cask "zed-dev" do
   # arm64 already implies macOS 11 or newer, so no macos: minimum is needed.
   # The former `macos: :catalina` is disabled now that the release is EOL.
   depends_on arch: :arm64
+  depends_on :macos
 
   app "Zed Dev.app"
 
