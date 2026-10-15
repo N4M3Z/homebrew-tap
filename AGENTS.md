@@ -14,9 +14,13 @@
 ## Rules
 
 - Never edit a `sha256` by hand. Run `bin/bump-release` or copy from upstream `checksums.txt`.
-- A formula that pins only macOS archives keeps a top-level `url` and `depends_on :macos`.
-  Without a top-level `url`, brew rejects the formula on Linux.
+- A formula that pins only macOS archives selects them with `if Hardware::CPU.intel?` and `else`,
+  then adds `depends_on :macos`. Brew parses formulae on Linux too, so a `url` must exist there.
+  `brew style` rejects a `url` inside `on_intel`. `bin/bump-release` rewrites the `if` layout.
 - No `version` stanza when the version is readable from the URL. `brew audit` rejects it.
+- Start no comment line with `depends_on`. `brew style` reads it as a commented-out dependency.
+- Before a push, run `brew style n4m3z/tap` and `brew audit --tap=n4m3z/tap`, with output
+  redirected to a file. test-bot runs both. Never pipe brew output.
 - Pin every third-party action to a full commit SHA with a version comment.
 - Commit format: `type: description` (feat, fix, docs, chore), lowercase, no scope.
 - `make install` once after cloning, `make validate` before a commit.
