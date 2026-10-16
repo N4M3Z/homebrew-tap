@@ -44,4 +44,5 @@ git clone https://github.com/N4M3Z/homebrew-tap.git
 cd homebrew-tap
 make install    # check tools and git hooks
 make validate   # the commit-stage checks
+make ci         # every CI check this machine can run, before a push
 ```

@@ -19,8 +19,9 @@
   `brew style` rejects a `url` inside `on_intel`. `bin/bump-release` rewrites the `if` layout.
 - No `version` stanza when the version is readable from the URL. `brew audit` rejects it.
 - Start no comment line with `depends_on`. `brew style` reads it as a commented-out dependency.
-- Before a push, run `brew style n4m3z/tap` and `brew audit --tap=n4m3z/tap`, with output
-  redirected to a file. test-bot runs both. Never pipe brew output.
+- Before a push, run `make ci`. It runs the commit and pre-push checks, then the test-bot
+  tap syntax stage in the CI Linux image against this checkout. It cannot run the formula
+  install leg, PR Lint, or the Release Notes check. Never pipe brew output.
 - Pin every third-party action to a full commit SHA with a version comment.
 - Commit format: `type: description` (feat, fix, docs, chore), lowercase, no scope.
 - `make install` once after cloning, `make validate` before a commit.

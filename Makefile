@@ -1,8 +1,11 @@
-.PHONY: help install validate
+.PHONY: help install validate push-checks tap-syntax ci
 
 help:
-	@echo "  make install    install check tools and activate hooks"
-	@echo "  make validate   run commit-stage checks"
+	@echo "  make install       install check tools and activate hooks"
+	@echo "  make validate      run commit-stage checks"
+	@echo "  make push-checks   run pre-push checks on commits not on origin/main"
+	@echo "  make tap-syntax    run brew test-bot tap syntax in the CI Linux image"
+	@echo "  make ci            run every CI check that works on this machine"
 
 install:
 	git config core.hooksPath .githooks
@@ -17,3 +20,15 @@ install:
 
 validate:
 	@bash .githooks/pre-commit --all-files
+
+# Checks the commits from the origin/main merge base to git HEAD. Under jj,
+# git HEAD is @-, so describe the change and run jj new first.
+push-checks:
+	@bash .githooks/pre-push < /dev/null
+
+tap-syntax:
+	@bash scripts/check-tap-syntax
+
+# REQUIRE_GATES fails on a missing linter, as the Quality workflow does.
+ci: export REQUIRE_GATES = 1
+ci: validate push-checks tap-syntax

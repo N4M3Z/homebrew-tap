@@ -58,6 +58,13 @@ repos:
             language: system
             files: ^\.github/workflows/.*\.ya?ml$
 
+          - id: check-action-pins
+            name: action pinning
+            entry: bash scripts/check-action-pins
+            language: system
+            files: ^\.github/workflows/
+            pass_filenames: false
+
           - id: semgrep
             name: semgrep OWASP
             entry: semgrep scan --config=p/owasp-top-ten --metrics=off --disable-version-check --quiet .

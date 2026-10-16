@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Run the tap syntax stage of brew test-bot (brew style, readall, and audit)
+# against this checkout, in the Homebrew image that the Linux CI leg uses.
+# The checkout is copied into the container's tap directory, so uncommitted
+# edits are checked and the host's installed tap stays untouched.
+set -euo pipefail
+
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+
+# CI pulls the latest image on every run. --pull always keeps a cached image
+# from hiding a new style or audit rule.
+docker run --rm --pull always --platform linux/amd64 \
+    --volume "$root:/src:ro" \
+    ghcr.io/homebrew/brew:main \
+    bash -c '
+        set -euo pipefail
+        tap="$(brew --repository)/Library/Taps/n4m3z/homebrew-tap"
+        mkdir -p "$(dirname "$tap")"
+        cp -R /src "$tap"
+        brew trust --tap n4m3z/tap
+        brew test-bot --only-tap-syntax --tap=n4m3z/tap
+    '

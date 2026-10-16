@@ -11,9 +11,11 @@ make install    # check tools and git hooks
 ## Adding a formula
 
 1. Write `Formula/<name>.rb`. Pin release archives by the `sha256` upstream publishes.
-2. `brew install --build-from-source ./Formula/<name>.rb` and `brew test <name>` locally.
+2. `HOMEBREW_DEVELOPER=1 brew install --build-from-source ./Formula/<name>.rb`, then `brew test <name>`.
+   Homebrew refuses a formula file path unless `HOMEBREW_DEVELOPER` is set.
+   This installs into your real Homebrew, so `make ci` leaves it out.
 3. Add the formula to `README.md`, and to the matrix in `.github/workflows/bump.yml` when upstream publishes a `checksums.txt`.
-4. `make validate`, then open a pull request.
+4. `make ci`, then open a pull request.
 
 ## Bumping a formula
 

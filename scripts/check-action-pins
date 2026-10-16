@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Fail when a workflow uses a third-party action that is not pinned to a full
+# commit SHA. First-party paths (./) and runedeck/* refs are exempt. Comments
+# are stripped before the SHA test so trailing text cannot fake a pin.
+set -euo pipefail
+
+violations=$(grep -RnE '^[[:space:]]*-?[[:space:]]*uses:[[:space:]]*["'\'']?[^./[:space:]"'\'']' .github/workflows 2>/dev/null \
+    | sed 's/[[:space:]]#.*$//' \
+    | grep -vE 'uses:[[:space:]]*["'\'']?(\./|runedeck/)' \
+    | grep -vE '@[0-9a-f]{40}["'\'']?$' || true)
+if [ -n "$violations" ]; then
+    echo "Unpinned third-party actions:"
+    printf '%s\n' "$violations"
+    exit 1
+fi
+echo "All third-party actions pinned."
