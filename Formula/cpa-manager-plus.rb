@@ -19,11 +19,11 @@ class CpaManagerPlus < Formula
   # top-level url with an on_intel override fails brew audit, which reads
   # the override as a second stable url.
   if Hardware::CPU.intel?
-    url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.14.6/cpa-manager-plus_v1.14.6_darwin_amd64.tar.gz"
-    sha256 "eda7b9267fb6d59cd273868b037c8a6489fbe9ecc910d4aebe471afca1430389"
+    url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.14.7/cpa-manager-plus_v1.14.7_darwin_amd64.tar.gz"
+    sha256 "a4d5a07bb85ff62ce1ad03dcb1bb90e6ea7d0437723d3ede973c8881af12eef7"
   else
-    url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.14.6/cpa-manager-plus_v1.14.6_darwin_arm64.tar.gz"
-    sha256 "e0cacf60a6544665e117acc5e7ff89a445d96145fac99ac7b119972a9d34264e"
+    url "https://github.com/seakee/CPA-Manager-Plus/releases/download/v1.14.7/cpa-manager-plus_v1.14.7_darwin_arm64.tar.gz"
+    sha256 "1a5337bddc070f456bb809386eae409f880722202c463abc3a3cc15de5377243"
   end
 
   depends_on :macos
