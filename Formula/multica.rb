@@ -37,7 +37,10 @@ class Multica < Formula
   service do
     run [opt_bin/"multica", "daemon", "start", "--foreground", "--no-auto-update"]
     keep_alive true
-    environment_variables PATH: "#{Dir.home}/.local/bin:#{std_service_path_env}"
+    # Run workspaces default to ~/multica_workspaces, a visible folder in the
+    # home directory. Keep them under the XDG data directory instead.
+    environment_variables PATH:                    "#{Dir.home}/.local/bin:#{std_service_path_env}",
+                          MULTICA_WORKSPACES_ROOT: "#{Dir.home}/.local/share/multica/workspaces"
     log_path var/"log/multica-daemon.log"
     error_log_path var/"log/multica-daemon.err.log"
   end
