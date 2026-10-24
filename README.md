@@ -68,6 +68,20 @@ proton-drive auth login
 
 Not to be confused with the `proton-drive` Homebrew cask, which is the GUI app.
 
+### rust-cache
+
+[rust-cache](https://github.com/N4M3Z/rust-cache) prunes cargo build folders
+every night. macOS debug builds keep the object files of every compile, and
+cargo-sweep cannot remove them. rust-cache deletes the ones no binary uses,
+then runs cargo-sweep by age and by installed rustc.
+
+```sh
+brew install N4M3Z/tap/rust-cache
+brew services start N4M3Z/tap/rust-cache
+```
+
+The service runs at 04:00 and logs to `$(brew --prefix)/var/log/rust-cache.log`.
+
 ### vale-ls
 
 [vale-ls](https://github.com/vale-cli/vale-ls), the language server for the
