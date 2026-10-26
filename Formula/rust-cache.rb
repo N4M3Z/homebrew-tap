@@ -8,8 +8,8 @@
 class RustCache < Formula
   desc "Prune stale cargo build output, including leftover macOS debug objects"
   homepage "https://github.com/N4M3Z/rust-cache"
-  url "https://github.com/N4M3Z/rust-cache/releases/download/v0.1.0/rust-cache-0.1.0.tar.gz"
-  sha256 "cab0cc03f73b7e8bdf8433343589b9ec5844754e8d446fc15d6f9e5ac54b7d78"
+  url "https://github.com/N4M3Z/rust-cache/releases/download/v0.2.0/rust-cache-0.2.0.tar.gz"
+  sha256 "b901c9e7c12bed01da6dbcc6b2f6e24f8f8bf22d88b44c57204c3a5858723dae"
   license "EUPL-1.2"
 
   livecheck do
