@@ -21,11 +21,11 @@ class Cliproxyapi < Formula
   # with an on_intel override fails brew audit, which reads the override as
   # a second stable url.
   if Hardware::CPU.intel?
-    url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.46/CLIProxyAPI_8.0.46_darwin_amd64.tar.gz"
-    sha256 "bf8ba3bd1990e115bfba6f61a93d83233974a5457540ebdd03df69d142f14efb"
+    url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.49/CLIProxyAPI_8.0.49_darwin_amd64.tar.gz"
+    sha256 "43bf4faac98f49a677e4e0b93f878a43467c9710f5996ac23eda2220f51fceff"
   else
-    url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.46/CLIProxyAPI_8.0.46_darwin_aarch64.tar.gz"
-    sha256 "f9cdb85ccd70602ce084ad0aa8576a057a5e7dd8ff63a64b229cd145c5e6652b"
+    url "https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.49/CLIProxyAPI_8.0.49_darwin_aarch64.tar.gz"
+    sha256 "07c14333f1cd960e0445fc831de578305d835724dde735776d4f136b7195a4b3"
   end
 
   depends_on :macos
