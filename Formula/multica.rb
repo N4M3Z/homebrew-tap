@@ -25,11 +25,11 @@ class Multica < Formula
   # install. A top-level url with an on_intel override fails brew audit,
   # which reads the override as a second stable url.
   if Hardware::CPU.intel?
-    url "https://github.com/multica-ai/multica/releases/download/v0.8.0/multica-cli-0.8.0-darwin-amd64.tar.gz"
-    sha256 "40eebf036c9032317f492a62a9266d10ff32bb0354982b16430461619945d923"
+    url "https://github.com/multica-ai/multica/releases/download/v0.8.1/multica-cli-0.8.1-darwin-amd64.tar.gz"
+    sha256 "8f6b9be3145d0c7e5d15462eaa08c0413318c31e6bae8047ef6595ddb34632ae"
   else
-    url "https://github.com/multica-ai/multica/releases/download/v0.8.0/multica-cli-0.8.0-darwin-arm64.tar.gz"
-    sha256 "cb649675794aacbf97163da87399da5524bb43cff31c9819dc1ac717adfa6a27"
+    url "https://github.com/multica-ai/multica/releases/download/v0.8.1/multica-cli-0.8.1-darwin-arm64.tar.gz"
+    sha256 "d7737360df06c05a547072755e3f3fe0e4d51a1bf4e4a4890d6b105ffc38a976"
   end
 
   depends_on :macos
