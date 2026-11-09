@@ -3,17 +3,29 @@
 #
 # Works for formulas that pin per-platform release archives whose upstream
 # publishes a checksums.txt asset (cliproxyapi, cpa-manager-plus). Every
-# `url` line has the old version replaced by the new one, and the `sha256`
+# `url` line has its own version replaced by the new one, and the `sha256`
 # line that follows it is replaced by the checksum recorded for that file
 # name in checksums.txt. A `version "..."` line, when present, is updated.
 #
+# An Intel macOS archive (darwin_amd64 or darwin-amd64 in the file name) may
+# be missing from a release, because upstream's Intel build job can fail on
+# its own. Its url and sha256 lines then stay on the version they had, and
+# the other archives move on. A later run moves the Intel lines too, once a
+# release has the Intel archive again. Any other missing archive is an error.
+#
 # Usage: bin/bump-release Formula/<name>.rb
-# Exit 0 and print nothing when the formula is already current.
+# When it changes the formula it prints "bumped <name> <old> -> <new>", then
+# one "missing: <file>" line for each Intel archive it left behind.
+# Exit 0 and print nothing when nothing changed.
 # Needs: curl, jq, awk. GITHUB_TOKEN is optional (raises the API rate limit).
 set -euo pipefail
 
+# Archives a release may lack without failing the bump: Intel macOS builds.
+optional='darwin[-_]amd64'
+
 formula="${1:?usage: bump-release Formula/<name>.rb}"
 [ -f "$formula" ] || { echo "no such formula: $formula" >&2; exit 2; }
+name=$(basename "$formula" .rb)
 
 homepage=$(awk -F'"' '/^  homepage "/ { print $2; exit }' "$formula")
 repo=${homepage#https://github.com/}
@@ -32,13 +44,20 @@ tag=$(curl -fsSL "${auth[@]}" -H 'Accept: application/vnd.github+json' \
     "https://api.github.com/repos/$repo/releases/latest" | jq -r .tag_name)
 [ -n "$tag" ] && [ "$tag" != null ] || { echo "cannot read the latest release of $repo" >&2; exit 2; }
 latest=${tag#v}
-[ "$latest" != "$current" ] || exit 0
+
+# Every url line already points at the latest release: nothing to do. A url
+# line that an earlier run left on an older version keeps the bump going.
+stale=$(awk -F'"' '/^ *url "/ { print $2 }' "$formula" | grep -v -F "/$tag/" || true)
+[ "$latest" != "$current" ] || [ -n "$stale" ] || exit 0
 
 checksums=$(mktemp)
-trap 'rm -f "$checksums"' EXIT
+missing=$(mktemp)
+trap 'rm -f "$checksums" "$missing"' EXIT
 curl -fsSL "https://github.com/$repo/releases/download/$tag/checksums.txt" -o "$checksums"
 
-updated=$(awk -v old="$current" -v new="$latest" -v sums="$checksums" '
+updated=$(awk -v old="$current" -v new="$latest" -v sums="$checksums" \
+    -v optional="$optional" -v missing="$missing" '
+    function literal(s) { gsub(/\./, "\\.", s); return s }
     BEGIN {
         while ((getline line < sums) > 0) {
             n = split(line, parts, /[ \t]+/)
@@ -47,14 +66,26 @@ updated=$(awk -v old="$current" -v new="$latest" -v sums="$checksums" '
             sha[file] = parts[1]
         }
     }
-    /^  version "/ { sub(old, new); print; next }
+    /^  version "/ { sub(literal(old), new); print; next }
     /^ *url "/ {
-        gsub(old, new)
-        split($0, q, "\"")
+        line = $0
+        # The version this url line pins, which can trail the others.
+        from = old
+        if (match(line, /\/releases\/download\/v?[^\/]+\//)) {
+            from = substr(line, RSTART, RLENGTH)
+            sub(/^\/releases\/download\/v?/, "", from); sub(/\/$/, "", from)
+        }
+        gsub(literal(from), new, line)
+        split(line, q, "\"")
         n = split(q[2], segs, "/")
         pending = segs[n]
-        if (!(pending in sha)) { printf "no checksum for %s\n", pending > "/dev/stderr"; exit 3 }
-        print; next
+        if (pending in sha) { print line; next }
+        if (pending ~ optional) {
+            print pending > missing
+            pending = ""
+            print; next
+        }
+        printf "no checksum for %s\n", pending > "/dev/stderr"; exit 3
     }
     /^ *sha256 "/ && pending != "" {
         sub(/"[0-9a-f]+"/, "\"" sha[pending] "\"")
@@ -64,5 +95,13 @@ updated=$(awk -v old="$current" -v new="$latest" -v sums="$checksums" '
     { print }
 ' "$formula")
 
+if [ "$updated" = "$(cat "$formula")" ]; then
+    while read -r file; do
+        echo "$name: $tag has no $file; its url stays on the older release" >&2
+    done < "$missing"
+    exit 0
+fi
+
 printf '%s\n' "$updated" > "$formula"
-echo "bumped $(basename "$formula" .rb) $current -> $latest"
+echo "bumped $name $current -> $latest"
+sed 's/^/missing: /' "$missing"
