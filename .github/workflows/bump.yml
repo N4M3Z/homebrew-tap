@@ -4,6 +4,8 @@
 # bin/bump-release, which rewrites the url and sha256 lines from the
 # release's checksums.txt. A change lands as a pull request on its own
 # branch so brew test-bot runs on it; nothing is pushed to main here.
+# A release that lacks only the Intel macOS archive still bumps the other
+# archives; a later release with the Intel archive brings Intel up too.
 #
 # The pull request is opened with a Runewright App token instead of
 # GITHUB_TOKEN because pull requests created by GITHUB_TOKEN never trigger
@@ -45,6 +47,8 @@ jobs:
         with:
           persist-credentials: false
 
+      # bin/bump-release prints "bumped <name> <old> -> <new>", then one
+      # "missing: <file>" line for each Intel archive the release lacks.
       - name: Bump formula
         id: bump
         env:
@@ -52,8 +56,13 @@ jobs:
         run: |
           out=$(bin/bump-release "Formula/${{ matrix.formula }}.rb")
           echo "$out"
-          version=${out##* }
-          [ -n "$out" ] && echo "version=$version" >> "$GITHUB_OUTPUT" || true
+          bumped=$(printf '%s\n' "$out" | grep '^bumped ' || true)
+          [ -n "$bumped" ] || exit 0
+          missing=$(printf '%s\n' "$out" | sed -n 's/^missing: //p' | paste -sd ' ' -)
+          {
+            echo "version=${bumped##* }"
+            echo "missing=$missing"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Open pull request
         if: steps.bump.outputs.version != ''
@@ -61,8 +70,19 @@ jobs:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           FORMULA: ${{ matrix.formula }}
           VERSION: ${{ steps.bump.outputs.version }}
+          MISSING: ${{ steps.bump.outputs.missing }}
         run: |
           branch="bump/$FORMULA-$VERSION"
+          title="chore: $FORMULA $VERSION"
+          note=""
+          # The release lacks the Intel archive, so the Intel url stays on its
+          # older release. This bump gets its own branch, so the run that later
+          # adds the Intel archive opens a pull request of its own.
+          if [ -n "$MISSING" ]; then
+            branch="$branch-without-intel"
+            title="$title without the Intel archive"
+            note=$(printf '\n- Not in the release, so its url stays on the older release: %s' "$MISSING")
+          fi
           # An open or merged pull request for this version is enough. A
           # closed one is not: a bump closed as superseded, or closed while
           # CI was broken, must be offered again.
@@ -78,11 +98,11 @@ jobs:
           git config user.email "runewright[bot]@users.noreply.github.com"
           git switch -c "$branch"
           git add "Formula/$FORMULA.rb"
-          git commit -m "chore: $FORMULA $VERSION" -- "Formula/$FORMULA.rb"
+          git commit -m "$title" -- "Formula/$FORMULA.rb"
           git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$branch"
           gh pr create --base main --head "$branch" \
-            --title "chore: $FORMULA $VERSION" \
-            --body "$(printf '## Summary\n- Upstream release %s. Checksums copied from the release checksums.txt by bin/bump-release.\n\n## Release Notes\n- %s %s\n' "$VERSION" "$FORMULA" "$VERSION")"
+            --title "$title" \
+            --body "$(printf '## Summary\n- Upstream release %s. Checksums copied from the release checksums.txt by bin/bump-release.%s\n\n## Release Notes\n- %s %s\n' "$VERSION" "$note" "$FORMULA" "$VERSION")"
           # Upstream ships several releases a day; an older open bump for the
           # same formula is superseded, so close it rather than leave a stack.
           gh pr list --state open --json number,headRefName \
